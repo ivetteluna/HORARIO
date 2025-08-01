@@ -2,15 +2,16 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Settings, Clock, Upload, Save } from "lucide-react"
+import { Settings, Clock, Upload, Save, Download, UploadCloud } from "lucide-react"
 import { useConfiguracion, useDatabase } from "@/hooks/useDatabase"
+import { database } from "@/lib/database"
 import { toast } from "@/hooks/use-toast"
 
 interface ConfiguracionHorario {
@@ -64,10 +65,9 @@ export default function ConfiguracionPage() {
     email: "info@centrosanjose.edu.do",
   })
 
-  const [logoFile, setLogoFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Load configuration on component mount
   useEffect(() => {
     const loadConfig = async () => {
       if (!isInitialized) return
@@ -94,10 +94,9 @@ export default function ConfiguracionPage() {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setLogoFile(file)
       const reader = new FileReader()
-      reader.onload = (e) => {
-        setEscuela({ ...escuela, logo: e.target?.result as string })
+      reader.onloadend = () => {
+        setEscuela((prev) => ({ ...prev, logo: reader.result as string }))
       }
       reader.readAsDataURL(file)
     }
@@ -166,6 +165,80 @@ export default function ConfiguracionPage() {
     }
   }
 
+  const handleExport = async () => {
+    try {
+      const exportData = {
+        docentes: await database.getAll("docentes"),
+        asignaturas: await database.getAll("asignaturas"),
+        cursos: await database.getAll("cursos"),
+        configuracion: await database.getAll("configuracion"),
+      }
+
+      const jsonString = JSON.stringify(exportData, null, 2)
+      const blob = new Blob([jsonString], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `configuracion_horarios_${new Date().toISOString().split("T")[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      toast({
+        title: "Exportación exitosa",
+        description: "Todos los datos han sido exportados.",
+      })
+    } catch (error) {
+      console.error("Error exporting data:", error)
+      toast({
+        title: "Error de Exportación",
+        description: "No se pudieron exportar los datos.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!confirm("¿Estás seguro? Importar un archivo borrará todos los datos actuales del sistema.")) {
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string)
+
+        // Limpiar base de datos
+        await database.clearAllStores()
+
+        // Importar datos
+        for (const docente of data.docentes || []) await database.save("docentes", docente)
+        for (const asignatura of data.asignaturas || []) await database.save("asignaturas", asignatura)
+        for (const curso of data.cursos || []) await database.save("cursos", curso)
+        for (const config of data.configuracion || []) await database.save("configuracion", config)
+
+        toast({
+          title: "Importación Completada",
+          description: "Los datos se han restaurado. La página se recargará.",
+        })
+
+        setTimeout(() => window.location.reload(), 2000)
+      } catch (error) {
+        console.error("Error importing data:", error)
+        toast({
+          title: "Error de Importación",
+          description: "El archivo no es válido o está corrupto.",
+          variant: "destructive",
+        })
+      }
+    }
+    reader.readAsText(file)
+  }
+
   if (!isInitialized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-cyan-100 p-6 flex items-center justify-center">
@@ -180,7 +253,6 @@ export default function ConfiguracionPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-cyan-100 p-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <Settings className="h-8 w-8 text-indigo-600" />
@@ -217,7 +289,6 @@ export default function ConfiguracionPage() {
                         className="mt-1"
                       />
                     </div>
-
                     <div>
                       <Label htmlFor="direccion">Dirección</Label>
                       <Input
@@ -227,7 +298,6 @@ export default function ConfiguracionPage() {
                         className="mt-1"
                       />
                     </div>
-
                     <div>
                       <Label htmlFor="telefono">Teléfono</Label>
                       <Input
@@ -237,7 +307,6 @@ export default function ConfiguracionPage() {
                         className="mt-1"
                       />
                     </div>
-
                     <div>
                       <Label htmlFor="email">Email</Label>
                       <Input
@@ -249,25 +318,14 @@ export default function ConfiguracionPage() {
                       />
                     </div>
                   </div>
-
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="logo">Logo de la Institución</Label>
                       <div className="mt-2 space-y-4">
-                        <Input
-                          id="logo"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoUpload}
-                          className="cursor-pointer"
-                        />
+                        <Input id="logo" type="file" accept="image/*" onChange={handleLogoUpload} className="cursor-pointer" />
                         {escuela.logo && (
                           <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                            <img
-                              src={escuela.logo || "/placeholder.svg"}
-                              alt="Logo"
-                              className="mx-auto max-w-full h-32 object-contain"
-                            />
+                            <img src={escuela.logo} alt="Logo" className="mx-auto max-w-full h-32 object-contain" />
                             <p className="text-sm text-gray-500 mt-2">Dimensiones recomendadas: 400px de ancho</p>
                           </div>
                         )}
@@ -277,113 +335,124 @@ export default function ConfiguracionPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle>Gestión de Datos</CardTitle>
+                <CardDescription>Crea copias de seguridad o restaura los datos del sistema.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col sm:flex-row gap-4">
+                <Button onClick={handleExport} variant="outline" className="w-full">
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar Datos
+                </Button>
+                <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full">
+                  <UploadCloud className="mr-2 h-4 w-4" />
+                  Importar Datos
+                </Button>
+                <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json" />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="horarios" className="space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-              <Card className="bg-white/90 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    Períodos de Clase Personalizados
-                  </CardTitle>
-                  <CardDescription>Define los períodos exactos de clase según tu horario institucional</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <Label className="text-base font-medium">Períodos del Día</Label>
-                    <Button size="sm" onClick={agregarPeriodo} variant="outline">
-                      Agregar Período
-                    </Button>
-                  </div>
+            <Card className="bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Períodos de Clase Personalizados
+                </CardTitle>
+                <CardDescription>Define los períodos exactos de clase según tu horario institucional</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center mb-4">
+                  <Label className="text-base font-medium">Períodos del Día</Label>
+                  <Button size="sm" onClick={agregarPeriodo} variant="outline">
+                    Agregar Período
+                  </Button>
+                </div>
 
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {horario.periodosPersonalizados.map((periodo, index) => (
-                      <div key={index} className="border rounded-lg p-4 space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                          <div>
-                            <Label className="text-sm">Nombre</Label>
-                            <Input
-                              placeholder="Nombre del período"
-                              value={periodo.nombre}
-                              onChange={(e) => actualizarPeriodo(index, "nombre", e.target.value)}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-sm">Hora Inicio</Label>
-                            <Input
-                              type="time"
-                              value={periodo.inicio}
-                              onChange={(e) => actualizarPeriodo(index, "inicio", e.target.value)}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-sm">Hora Fin</Label>
-                            <Input
-                              type="time"
-                              value={periodo.fin}
-                              onChange={(e) => actualizarPeriodo(index, "fin", e.target.value)}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-sm">Tipo</Label>
-                            <select
-                              value={periodo.tipo}
-                              onChange={(e) => actualizarPeriodo(index, "tipo", e.target.value)}
-                              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                            >
-                              <option value="clase">Clase</option>
-                              <option value="recreo">Recreo</option>
-                              <option value="almuerzo">Almuerzo</option>
-                            </select>
-                          </div>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {horario.periodosPersonalizados.map((periodo, index) => (
+                    <div key={index} className="border rounded-lg p-4 space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div>
+                          <Label className="text-sm">Nombre</Label>
+                          <Input
+                            placeholder="Nombre del período"
+                            value={periodo.nombre}
+                            onChange={(e) => actualizarPeriodo(index, "nombre", e.target.value)}
+                            className="mt-1"
+                          />
                         </div>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => eliminarPeriodo(index)}
-                          className="w-full"
-                        >
-                          Eliminar Período
-                        </Button>
+                        <div>
+                          <Label className="text-sm">Hora Inicio</Label>
+                          <Input
+                            type="time"
+                            value={periodo.inicio}
+                            onChange={(e) => actualizarPeriodo(index, "inicio", e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Hora Fin</Label>
+                          <Input
+                            type="time"
+                            value={periodo.fin}
+                            onChange={(e) => actualizarPeriodo(index, "fin", e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">Tipo</Label>
+                          <select
+                            value={periodo.tipo}
+                            onChange={(e) => actualizarPeriodo(index, "tipo", e.target.value)}
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                          >
+                            <option value="clase">Clase</option>
+                            <option value="recreo">Recreo</option>
+                            <option value="almuerzo">Almuerzo</option>
+                          </select>
+                        </div>
                       </div>
+                      <Button size="sm" variant="destructive" onClick={() => eliminarPeriodo(index)} className="w-full">
+                        Eliminar Período
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6">
+                  <Label>Días de la Semana</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"].map((dia) => (
+                      <label key={dia} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={horario.diasSemana.includes(dia)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setHorario({
+                                ...horario,
+                                diasSemana: [...horario.diasSemana, dia],
+                              })
+                            } else {
+                              setHorario({
+                                ...horario,
+                                diasSemana: horario.diasSemana.filter((d) => d !== dia),
+                              })
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span className="text-sm">{dia}</span>
+                      </label>
                     ))}
                   </div>
-
-                  <div className="mt-6">
-                    <Label>Días de la Semana</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"].map((dia) => (
-                        <label key={dia} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={horario.diasSemana.includes(dia)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setHorario({
-                                  ...horario,
-                                  diasSemana: [...horario.diasSemana, dia],
-                                })
-                              } else {
-                                setHorario({
-                                  ...horario,
-                                  diasSemana: horario.diasSemana.filter((d) => d !== dia),
-                                })
-                              }
-                            }}
-                            className="rounded"
-                          />
-                          <span className="text-sm">{dia}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="preview" className="space-y-6">
@@ -394,15 +463,9 @@ export default function ConfiguracionPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Header del horario */}
                   <div className="text-center border-b pb-4">
                     {escuela.logo && (
-                      <img
-                        src={escuela.logo || "/placeholder.svg"}
-                        alt="Logo"
-                        className="mx-auto mb-4"
-                        style={{ width: "400px", height: "auto" }}
-                      />
+                      <img src={escuela.logo} alt="Logo" className="mx-auto mb-4" style={{ width: "400px", height: "auto" }} />
                     )}
                     <h2 className="text-2xl font-bold">{escuela.nombre}</h2>
                     <p className="text-gray-600">{escuela.direccion}</p>
@@ -411,7 +474,6 @@ export default function ConfiguracionPage() {
                     </p>
                   </div>
 
-                  {/* Estructura de horarios */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <h3 className="font-semibold mb-3">Estructura de Horarios</h3>
@@ -423,8 +485,8 @@ export default function ConfiguracionPage() {
                               periodo.tipo === "recreo"
                                 ? "bg-yellow-100"
                                 : periodo.tipo === "almuerzo"
-                                  ? "bg-orange-100"
-                                  : "bg-blue-50"
+                                ? "bg-orange-100"
+                                : "bg-blue-50"
                             }`}
                           >
                             <span className="font-medium">{periodo.nombre}</span>
@@ -464,7 +526,6 @@ export default function ConfiguracionPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Save Button */}
         <div className="flex justify-end mt-6">
           <Button onClick={guardarConfiguracion} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700">
             {saving ? (
