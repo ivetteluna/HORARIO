@@ -44,12 +44,10 @@ export default function CursosPage() {
 
   // Form state
   const [formData, setFormData] = useState({
-    nombre: "",
     nivel: "",
     grado: "",
     seccion: "",
     estudiantesMatriculados: "",
-    aula: "",
   })
 
   if (!isInitialized || loading) {
@@ -148,12 +146,10 @@ export default function CursosPage() {
 
   const resetForm = () => {
     setFormData({
-      nombre: "",
       nivel: "",
       grado: "",
       seccion: "",
       estudiantesMatriculados: "",
-      aula: "",
     })
     setEditingCurso(null)
   }
@@ -161,24 +157,25 @@ export default function CursosPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!formData.nombre || !formData.nivel || !formData.grado || !formData.seccion) {
+    if (!formData.nivel || !formData.grado || !formData.seccion) {
       toast({
-        title: "Error",
-        description: "Por favor completa todos los campos obligatorios",
+        title: "Error de Validación",
+        description: "Por favor, completa los campos Nivel, Grado y Sección.",
         variant: "destructive",
       })
       return
     }
 
-    // Verificar si ya existe un curso con el mismo nombre
+    const nombreDelCurso = `${formData.grado} ${formData.seccion} ${formData.nivel.charAt(0).toUpperCase() + formData.nivel.slice(1)}`
+
     const cursoExistente = cursos.find(
-      (c) => c.nombre === formData.nombre && (!editingCurso || c.id !== editingCurso.id),
+      (c) => c.nombre === nombreDelCurso && (!editingCurso || c.id !== editingCurso.id),
     )
 
     if (cursoExistente) {
       toast({
-        title: "Error",
-        description: "Ya existe un curso con ese nombre",
+        title: "Curso Duplicado",
+        description: "Ya existe un curso con el mismo Nivel, Grado y Sección.",
         variant: "destructive",
       })
       return
@@ -187,22 +184,24 @@ export default function CursosPage() {
     try {
       const cursoData = {
         ...formData,
+        nombre: nombreDelCurso,
+        aula: "",
         estudiantesMatriculados: Number.parseInt(formData.estudiantesMatriculados) || 0,
-        asignaturas: [],
-        horasSemanales: 0,
+        asignaturas: editingCurso ? editingCurso.asignaturas : [],
+        horasSemanales: editingCurso ? editingCurso.horasSemanales : 0,
       }
 
       if (editingCurso) {
         await updateCurso(editingCurso.id, cursoData)
         toast({
           title: "Curso actualizado",
-          description: `El curso ${formData.nombre} ha sido actualizado exitosamente`,
+          description: `El curso ${nombreDelCurso} ha sido actualizado exitosamente.`,
         })
       } else {
         await addCurso(cursoData)
         toast({
           title: "Curso creado",
-          description: `El curso ${formData.nombre} ha sido creado exitosamente`,
+          description: `El curso ${nombreDelCurso} ha sido creado exitosamente.`,
         })
       }
 
@@ -211,8 +210,8 @@ export default function CursosPage() {
     } catch (error) {
       console.error("Error saving curso:", error)
       toast({
-        title: "Error",
-        description: "No se pudo guardar el curso",
+        title: "Error al Guardar",
+        description: "No se pudo guardar el curso en la base de datos.",
         variant: "destructive",
       })
     }
@@ -221,12 +220,10 @@ export default function CursosPage() {
   const handleEdit = (curso) => {
     setEditingCurso(curso)
     setFormData({
-      nombre: curso.nombre,
       nivel: curso.nivel,
       grado: curso.grado,
       seccion: curso.seccion,
       estudiantesMatriculados: curso.estudiantesMatriculados?.toString() || "",
-      aula: curso.aula || "",
     })
     setIsDialogOpen(true)
   }
@@ -250,7 +247,6 @@ export default function CursosPage() {
     }
   }
 
-  // Contar cursos con problemas
   const cursosConProblemas = cursosOrdenados.filter((curso) => {
     const stats = calcularEstadisticasHoras(curso)
     return stats.excedeLimite || stats.horasFaltantes > 0
@@ -259,7 +255,6 @@ export default function CursosPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-cyan-100 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -285,14 +280,11 @@ export default function CursosPage() {
                       : "Completa la información para crear un nuevo curso"}
                   </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="nivel">Nivel *</Label>
-                      <Select
-                        value={formData.nivel}
-                        onValueChange={(value) => setFormData({ ...formData, nivel: value })}
-                      >
+                      <Select value={formData.nivel} onValueChange={(value) => setFormData({ ...formData, nivel: value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar nivel" />
                         </SelectTrigger>
@@ -304,10 +296,7 @@ export default function CursosPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="grado">Grado *</Label>
-                      <Select
-                        value={formData.grado}
-                        onValueChange={(value) => setFormData({ ...formData, grado: value })}
-                      >
+                      <Select value={formData.grado} onValueChange={(value) => setFormData({ ...formData, grado: value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar grado" />
                         </SelectTrigger>
@@ -322,14 +311,10 @@ export default function CursosPage() {
                       </Select>
                     </div>
                   </div>
-
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="seccion">Sección *</Label>
-                      <Select
-                        value={formData.seccion}
-                        onValueChange={(value) => setFormData({ ...formData, seccion: value })}
-                      >
+                      <Select value={formData.seccion} onValueChange={(value) => setFormData({ ...formData, seccion: value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar sección" />
                         </SelectTrigger>
@@ -353,29 +338,7 @@ export default function CursosPage() {
                       />
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="nombre">Nombre del Curso *</Label>
-                    <Input
-                      id="nombre"
-                      placeholder="Ej: 1° A, 2° B, etc."
-                      value={formData.nombre}
-                      onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="aula">Aula</Label>
-                    <Input
-                      id="aula"
-                      placeholder="Ej: Aula 101, Laboratorio, etc."
-                      value={formData.aula}
-                      onChange={(e) => setFormData({ ...formData, aula: e.target.value })}
-                    />
-                  </div>
-
-                  <DialogFooter>
+                  <DialogFooter className="pt-4">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancelar
                     </Button>
@@ -389,7 +352,6 @@ export default function CursosPage() {
           </div>
         </div>
 
-        {/* Alerta de ordenamiento automático */}
         <Alert className="mb-6">
           <ArrowUpDown className="h-4 w-4" />
           <AlertDescription>
@@ -406,7 +368,6 @@ export default function CursosPage() {
           </AlertDescription>
         </Alert>
 
-        {/* Alertas de cursos con problemas */}
         {cursosConProblemas.length > 0 && (
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
@@ -431,7 +392,6 @@ export default function CursosPage() {
           </Alert>
         )}
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
@@ -444,7 +404,6 @@ export default function CursosPage() {
               </div>
             </CardContent>
           </Card>
-
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -458,7 +417,6 @@ export default function CursosPage() {
               </div>
             </CardContent>
           </Card>
-
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -472,7 +430,6 @@ export default function CursosPage() {
               </div>
             </CardContent>
           </Card>
-
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -486,7 +443,6 @@ export default function CursosPage() {
           </Card>
         </div>
 
-        {/* Cursos List */}
         {cursosOrdenados.length === 0 ? (
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardContent className="p-12 text-center">
@@ -535,23 +491,13 @@ export default function CursosPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Información básica */}
-                    <div className="space-y-2">
-                      {curso.estudiantesMatriculados > 0 && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Users className="h-4 w-4" />
-                          <span>{curso.estudiantesMatriculados} estudiantes</span>
-                        </div>
-                      )}
-                      {curso.aula && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <GraduationCap className="h-4 w-4" />
-                          <span>{curso.aula}</span>
-                        </div>
-                      )}
-                    </div>
+                    {curso.estudiantesMatriculados > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Users className="h-4 w-4" />
+                        <span>{curso.estudiantesMatriculados} estudiantes</span>
+                      </div>
+                    )}
 
-                    {/* Docente titular */}
                     {docenteTitular ? (
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center gap-2 mb-1">
@@ -572,7 +518,6 @@ export default function CursosPage() {
                       </div>
                     )}
 
-                    {/* Estadísticas de horas */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">Horas asignadas:</span>
@@ -587,8 +532,8 @@ export default function CursosPage() {
                             stats.excedeLimite
                               ? "bg-red-500"
                               : stats.horasAsignadas > 30
-                                ? "bg-amber-500"
-                                : "bg-green-500"
+                              ? "bg-amber-500"
+                              : "bg-green-500"
                           }`}
                           style={{ width: `${Math.min((stats.horasAsignadas / 40) * 100, 100)}%` }}
                         ></div>
@@ -608,7 +553,6 @@ export default function CursosPage() {
                       </div>
                     </div>
 
-                    {/* Asignaturas faltantes */}
                     {stats.asignaturasFaltantes && stats.asignaturasFaltantes.length > 0 && (
                       <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
@@ -650,7 +594,6 @@ export default function CursosPage() {
                       </div>
                     )}
 
-                    {/* Alertas específicas */}
                     {stats.excedeLimite && (
                       <Alert variant="destructive">
                         <AlertTriangle className="h-4 w-4" />
