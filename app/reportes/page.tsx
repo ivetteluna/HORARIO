@@ -66,7 +66,6 @@ export default function ReportesPage() {
 
       reportePorGrado[claveGrado].cursos.push(curso)
 
-      // Obtener asignaturas disponibles para este grado
       const asignaturasDelGrado = asignaturas.filter((asig) => {
         const horasSemanales = asig.horasPorNivel?.[curso.nivel]?.[curso.grado] || 0
         return horasSemanales > 0
@@ -77,7 +76,6 @@ export default function ReportesPage() {
         return total + (asig.horasPorNivel?.[curso.nivel]?.[curso.grado] || 0)
       }, 0)
 
-      // Buscar docentes asignados a este curso
       const docentesDelCurso = docentes.filter((docente) =>
         docente.cursosAsignados?.some((ca) => ca.cursoId === curso.id),
       )
@@ -97,7 +95,6 @@ export default function ReportesPage() {
       })
     })
 
-    // Calcular asignaturas faltantes para cada grado
     Object.keys(reportePorGrado).forEach((claveGrado) => {
       const reporte = reportePorGrado[claveGrado]
       reporte.asignaturasFaltantes = reporte.asignaturasDisponibles.filter(
@@ -108,7 +105,6 @@ export default function ReportesPage() {
     return Object.values(reportePorGrado)
   }
 
-  // Función para calcular estadísticas generales
   const calcularEstadisticasGenerales = () => {
     const cursosConProblemas = cursos.filter((curso) => {
       const docentesDelCurso = docentes.filter((docente) =>
@@ -127,11 +123,8 @@ export default function ReportesPage() {
 
     return {
       totalCursos: cursos.length,
-      cursosConProblemas: cursosConProblemas.length,
       totalDocentes: docentes.length,
-      docentesSinAsignaciones: docentesSinAsignaciones.length,
       totalAsignaturas: asignaturas.length,
-      asignaturasNoAsignadas: asignaturasNoAsignadas.length,
       cursosConProblemas: cursosConProblemas,
       docentesSinAsignaciones: docentesSinAsignaciones,
       asignaturasNoAsignadas: asignaturasNoAsignadas,
@@ -141,11 +134,9 @@ export default function ReportesPage() {
   const reportePorGrado = calcularAsignaturasFaltantesPorGrado()
   const estadisticasGenerales = calcularEstadisticasGenerales()
 
-  // Filtrar por nivel si se selecciona
   const reporteFiltrado =
     filtroNivel === "todos" ? reportePorGrado : reportePorGrado.filter((r) => r.nivel === filtroNivel)
 
-  // Ordenar por nivel y grado
   const reporteOrdenado = reporteFiltrado.sort((a, b) => {
     if (a.nivel !== b.nivel) {
       return a.nivel === "primario" ? -1 : 1
@@ -158,7 +149,6 @@ export default function ReportesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-cyan-100 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <BarChart3 className="h-8 w-8 text-indigo-600" />
@@ -169,58 +159,60 @@ export default function ReportesPage() {
           </p>
         </div>
 
-        {/* Estadísticas Generales */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Cursos con Problemas</p>
-                  <p className="text-3xl font-bold text-red-600">{estadisticasGenerales.cursosConProblemas}</p>
+                  <p className="text-3xl font-bold text-red-600">{estadisticasGenerales.cursosConProblemas.length}</p>
                   <p className="text-xs text-gray-500">de {estadisticasGenerales.totalCursos} total</p>
                 </div>
                 <AlertTriangle className="h-8 w-8 text-red-600 opacity-80" />
               </div>
             </CardContent>
           </Card>
-
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Docentes Sin Asignar</p>
-                  <p className="text-3xl font-bold text-amber-600">{estadisticasGenerales.docentesSinAsignaciones}</p>
+                  <p className="text-3xl font-bold text-amber-600">
+                    {estadisticasGenerales.docentesSinAsignaciones.length}
+                  </p>
                   <p className="text-xs text-gray-500">de {estadisticasGenerales.totalDocentes} total</p>
                 </div>
                 <Users className="h-8 w-8 text-amber-600 opacity-80" />
               </div>
             </CardContent>
           </Card>
-
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Asignaturas No Asignadas</p>
-                  <p className="text-3xl font-bold text-orange-600">{estadisticasGenerales.asignaturasNoAsignadas}</p>
+                  <p className="text-3xl font-bold text-orange-600">
+                    {estadisticasGenerales.asignaturasNoAsignadas.length}
+                  </p>
                   <p className="text-xs text-gray-500">de {estadisticasGenerales.totalAsignaturas} total</p>
                 </div>
                 <BookOpen className="h-8 w-8 text-orange-600 opacity-80" />
               </div>
             </CardContent>
           </Card>
-
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Eficiencia General</p>
                   <p className="text-3xl font-bold text-green-600">
-                    {Math.round(
-                      ((estadisticasGenerales.totalCursos - estadisticasGenerales.cursosConProblemas) /
-                        estadisticasGenerales.totalCursos) *
-                        100,
-                    )}
+                    {estadisticasGenerales.totalCursos > 0
+                      ? Math.round(
+                          ((estadisticasGenerales.totalCursos - estadisticasGenerales.cursosConProblemas.length) /
+                            estadisticasGenerales.totalCursos) *
+                            100,
+                        )
+                      : 100}
                     %
                   </p>
                   <p className="text-xs text-gray-500">cursos completos</p>
@@ -231,7 +223,6 @@ export default function ReportesPage() {
           </Card>
         </div>
 
-        {/* Filtros */}
         <Card className="bg-white/90 backdrop-blur-sm mb-6">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -253,7 +244,6 @@ export default function ReportesPage() {
           </CardContent>
         </Card>
 
-        {/* Tabs de Reportes */}
         <Tabs defaultValue="asignaturas-faltantes" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="asignaturas-faltantes">Asignaturas Faltantes</TabsTrigger>
@@ -262,7 +252,6 @@ export default function ReportesPage() {
             <TabsTrigger value="resumen-general">Resumen General</TabsTrigger>
           </TabsList>
 
-          {/* Tab: Asignaturas Faltantes por Grado */}
           <TabsContent value="asignaturas-faltantes" className="space-y-6">
             <Card className="bg-white/90 backdrop-blur-sm">
               <CardHeader>
@@ -275,7 +264,7 @@ export default function ReportesPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {reporteOrdenado.length === 0 ? (
+                {reporteOrdenado.every((r) => r.asignaturasFaltantes.length === 0) ? (
                   <div className="text-center py-12">
                     <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">¡Excelente!</h3>
@@ -297,7 +286,6 @@ export default function ReportesPage() {
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                          {/* Estadísticas del grado */}
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div className="text-center p-2 bg-gray-50 rounded">
                               <div className="font-bold text-gray-900">{reporte.asignaturasDisponibles.length}</div>
@@ -309,7 +297,6 @@ export default function ReportesPage() {
                             </div>
                           </div>
 
-                          {/* Asignaturas faltantes */}
                           {reporte.asignaturasFaltantes.length > 0 ? (
                             <div className="space-y-3">
                               <div className="flex items-center gap-2">
@@ -353,7 +340,6 @@ export default function ReportesPage() {
                             </div>
                           )}
 
-                          {/* Lista de cursos del grado */}
                           <div className="pt-2 border-t">
                             <p className="text-xs text-gray-600 mb-2">Cursos en este grado:</p>
                             <div className="flex flex-wrap gap-1">
@@ -373,7 +359,6 @@ export default function ReportesPage() {
             </Card>
           </TabsContent>
 
-          {/* Tab: Cursos con Problemas */}
           <TabsContent value="cursos-problemas" className="space-y-6">
             <Card className="bg-white/90 backdrop-blur-sm">
               <CardHeader>
@@ -428,7 +413,6 @@ export default function ReportesPage() {
             </Card>
           </TabsContent>
 
-          {/* Tab: Docentes Disponibles */}
           <TabsContent value="docentes-disponibles" className="space-y-6">
             <Card className="bg-white/90 backdrop-blur-sm">
               <CardHeader>
@@ -472,8 +456,8 @@ export default function ReportesPage() {
                                 {docente.nivel === "primario"
                                   ? "Primario"
                                   : docente.nivel === "secundario"
-                                    ? "Secundario"
-                                    : "Ambos"}
+                                  ? "Secundario"
+                                  : "Ambos"}
                               </Badge>
                             </div>
                             <div className="flex justify-between">
@@ -498,7 +482,6 @@ export default function ReportesPage() {
             </Card>
           </TabsContent>
 
-          {/* Tab: Resumen General */}
           <TabsContent value="resumen-general" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-white/90 backdrop-blur-sm">
@@ -519,16 +502,20 @@ export default function ReportesPage() {
                       <div className="text-sm text-emerald-800">Docentes Totales</div>
                     </div>
                     <div className="text-center p-4 bg-amber-50 rounded-lg">
-                      <div className="text-2xl font-bold text-amber-600">{estadisticasGenerales.totalAsignaturas}</div>
+                      <div className="text-2xl font-bold text-amber-600">
+                        {estadisticasGenerales.totalAsignaturas}
+                      </div>
                       <div className="text-sm text-amber-800">Asignaturas Totales</div>
                     </div>
                     <div className="text-center p-4 bg-purple-50 rounded-lg">
                       <div className="text-2xl font-bold text-purple-600">
-                        {Math.round(
-                          ((estadisticasGenerales.totalCursos - estadisticasGenerales.cursosConProblemas) /
-                            estadisticasGenerales.totalCursos) *
-                            100,
-                        )}
+                        {estadisticasGenerales.totalCursos > 0
+                          ? Math.round(
+                              ((estadisticasGenerales.totalCursos - estadisticasGenerales.cursosConProblemas.length) /
+                                estadisticasGenerales.totalCursos) *
+                                100,
+                            )
+                          : 100}
                         %
                       </div>
                       <div className="text-sm text-purple-800">Eficiencia</div>
@@ -541,16 +528,16 @@ export default function ReportesPage() {
                       <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                         <span className="text-sm text-gray-600">Cursos Completos</span>
                         <Badge variant="default">
-                          {estadisticasGenerales.totalCursos - estadisticasGenerales.cursosConProblemas}
+                          {estadisticasGenerales.totalCursos - estadisticasGenerales.cursosConProblemas.length}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                         <span className="text-sm text-gray-600">Cursos con Problemas</span>
-                        <Badge variant="destructive">{estadisticasGenerales.cursosConProblemas}</Badge>
+                        <Badge variant="destructive">{estadisticasGenerales.cursosConProblemas.length}</Badge>
                       </div>
                       <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                         <span className="text-sm text-gray-600">Docentes Disponibles</span>
-                        <Badge variant="secondary">{estadisticasGenerales.docentesSinAsignaciones}</Badge>
+                        <Badge variant="secondary">{estadisticasGenerales.docentesSinAsignaciones.length}</Badge>
                       </div>
                     </div>
                   </div>
@@ -566,12 +553,12 @@ export default function ReportesPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
-                    {estadisticasGenerales.cursosConProblemas > 0 && (
+                    {estadisticasGenerales.cursosConProblemas.length > 0 && (
                       <Alert>
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>
-                          <strong>Prioridad Alta:</strong> Hay {estadisticasGenerales.cursosConProblemas} curso(s) sin
-                          docentes asignados.
+                          <strong>Prioridad Alta:</strong> Hay {estadisticasGenerales.cursosConProblemas.length}{" "}
+                          curso(s) sin docentes asignados.
                           <Link href="/docentes" className="ml-2 text-indigo-600 hover:underline">
                             Asignar docentes →
                           </Link>
@@ -579,12 +566,12 @@ export default function ReportesPage() {
                       </Alert>
                     )}
 
-                    {estadisticasGenerales.docentesSinAsignaciones > 0 && (
+                    {estadisticasGenerales.docentesSinAsignaciones.length > 0 && (
                       <Alert>
                         <Info className="h-4 w-4" />
                         <AlertDescription>
-                          <strong>Oportunidad:</strong> Hay {estadisticasGenerales.docentesSinAsignaciones} docente(s)
-                          disponible(s) para asignar.
+                          <strong>Oportunidad:</strong> Hay {estadisticasGenerales.docentesSinAsignaciones.length}{" "}
+                          docente(s) disponible(s) para asignar.
                           <Link href="/docentes" className="ml-2 text-indigo-600 hover:underline">
                             Ver docentes →
                           </Link>
@@ -592,12 +579,12 @@ export default function ReportesPage() {
                       </Alert>
                     )}
 
-                    {estadisticasGenerales.asignaturasNoAsignadas > 0 && (
+                    {estadisticasGenerales.asignaturasNoAsignadas.length > 0 && (
                       <Alert>
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription>
-                          <strong>Atención:</strong> Hay {estadisticasGenerales.asignaturasNoAsignadas} asignatura(s)
-                          sin asignar a ningún docente.
+                          <strong>Atención:</strong> Hay {estadisticasGenerales.asignaturasNoAsignadas.length}{" "}
+                          asignatura(s) sin asignar a ningún docente.
                           <Link href="/asignaturas" className="ml-2 text-indigo-600 hover:underline">
                             Ver asignaturas →
                           </Link>
@@ -605,8 +592,8 @@ export default function ReportesPage() {
                       </Alert>
                     )}
 
-                    {estadisticasGenerales.cursosConProblemas === 0 &&
-                      estadisticasGenerales.docentesSinAsignaciones === 0 && (
+                    {estadisticasGenerales.cursosConProblemas.length === 0 &&
+                      estadisticasGenerales.docentesSinAsignaciones.length === 0 && (
                         <Alert>
                           <CheckCircle className="h-4 w-4" />
                           <AlertDescription>

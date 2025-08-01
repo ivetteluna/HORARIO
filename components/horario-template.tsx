@@ -74,17 +74,18 @@ export function HorarioTemplate({ horario, entidad, tipo, configuracion }: Horar
 
   return (
     <div className="w-full bg-white">
-      {/* Encabezado - SOLO LOGO */}
       <div className="text-center mb-6">
-        <img
-          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-DLkvxN0JCPRdUjCRHU4yEu9M8ZCuka.png"
-          alt="Logo Institucional"
-          className="mx-auto mb-4 object-contain block"
-          style={{ width: "300px", height: "auto" }}
-        />
+        {configuracion.escuela?.logo && (
+          <img
+            src={configuracion.escuela.logo}
+            alt="Logo Institucional"
+            className="mx-auto mb-4 object-contain block"
+            style={{ width: "300px", height: "auto" }}
+          />
+        )}
+        <div className="text-xl font-bold mb-4">{nombreCompleto}</div>
       </div>
 
-      {/* Tabla de horario */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse border border-gray-400">
           <thead>
@@ -105,8 +106,8 @@ export function HorarioTemplate({ horario, entidad, tipo, configuracion }: Horar
                 periodo.tipo === "recreo" || periodo.tipo === "almuerzo"
                   ? "bg-yellow-100"
                   : index % 2 === 0
-                    ? "bg-white"
-                    : "bg-gray-50"
+                  ? "bg-white"
+                  : "bg-gray-50"
 
               return (
                 <tr key={periodo.nombre}>
@@ -128,16 +129,10 @@ export function HorarioTemplate({ horario, entidad, tipo, configuracion }: Horar
 
                     const asignacion = asignaciones[dia]?.[periodo.nombre]
 
-                    // Para horarios de CURSO: NO mostrar "Hora Pedagógica"
                     if (tipo === "curso" && (!asignacion || asignacion.asignatura === "Hora Pedagógica")) {
-                      return (
-                        <td key={dia} className={`border border-gray-400 p-2 text-xs text-center ${bgColor}`}>
-                          {/* Celda vacía para cursos sin asignatura */}
-                        </td>
-                      )
+                      return <td key={dia} className={`border border-gray-400 p-2 text-xs text-center ${bgColor}`}></td>
                     }
 
-                    // Para horarios de DOCENTE: mostrar "Hora Pedagógica" si no hay asignatura
                     if (tipo === "docente" && (!asignacion || asignacion.asignatura === "Hora Pedagógica")) {
                       return (
                         <td key={dia} className={`border border-gray-400 p-2 text-xs text-center ${bgColor}`}>
@@ -146,7 +141,6 @@ export function HorarioTemplate({ horario, entidad, tipo, configuracion }: Horar
                       )
                     }
 
-                    // Mostrar asignatura real
                     if (asignacion && asignacion.asignatura && asignacion.asignatura !== "Hora Pedagógica") {
                       return (
                         <td key={dia} className={`border border-gray-400 p-2 text-xs text-center ${bgColor}`}>
@@ -161,7 +155,6 @@ export function HorarioTemplate({ horario, entidad, tipo, configuracion }: Horar
                       )
                     }
 
-                    // Fallback: celda vacía
                     return <td key={dia} className={`border border-gray-400 p-2 text-xs text-center ${bgColor}`}></td>
                   })}
                 </tr>
@@ -171,7 +164,6 @@ export function HorarioTemplate({ horario, entidad, tipo, configuracion }: Horar
         </table>
       </div>
 
-      {/* Footer */}
       <div className="text-center mt-6 text-xs text-gray-500 border-t pt-4">
         <p>Generado automáticamente por el Sistema de Horarios Docentes</p>
         <p>Fecha de generación: {new Date(horario.fechaGeneracion).toLocaleDateString("es-DO")}</p>

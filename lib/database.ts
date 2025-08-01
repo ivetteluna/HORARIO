@@ -76,7 +76,6 @@ class DatabaseService {
   private initPromise: Promise<void> | null = null
 
   async init(): Promise<void> {
-    // Evitar múltiples inicializaciones simultáneas
     if (this.initPromise) {
       return this.initPromise
     }
@@ -108,39 +107,21 @@ class DatabaseService {
 
             console.log(`Upgrading database from version ${event.oldVersion} to ${event.newVersion}`)
 
-            // Create object stores
             if (!db.objectStoreNames.contains("docentes")) {
-              console.log("Creating docentes store")
               db.createObjectStore("docentes", { keyPath: "id" })
             }
-
             if (!db.objectStoreNames.contains("asignaturas")) {
-              console.log("Creating asignaturas store")
               db.createObjectStore("asignaturas", { keyPath: "id" })
             }
-
             if (!db.objectStoreNames.contains("cursos")) {
-              console.log("Creating cursos store")
               db.createObjectStore("cursos", { keyPath: "id" })
             }
-
             if (!db.objectStoreNames.contains("configuracion")) {
-              console.log("Creating configuracion store")
               db.createObjectStore("configuracion", { keyPath: "id" })
             }
-
             if (!db.objectStoreNames.contains("horarios")) {
-              console.log("Creating horarios store")
               db.createObjectStore("horarios", { keyPath: "id" })
             }
-
-            // Migrar datos existentes si es necesario
-            if (event.oldVersion > 0 && event.oldVersion < 3) {
-              console.log("Starting migration to version 3...")
-              this.migrateToV3(transaction)
-            }
-
-            console.log("Database schema updated successfully")
           } catch (error) {
             console.error("Error during database upgrade:", error)
             this.initPromise = null
@@ -161,88 +142,18 @@ class DatabaseService {
     return this.initPromise
   }
 
-  private migrateToV3(transaction: IDBTransaction) {
-    try {
-      console.log("Migrating existing data to version 3...")
-
-      // Migrar docentes - eliminar campos innecesarios
-      if (transaction.objectStoreNames.contains("docentes")) {
-        const docentesStore = transaction.objectStore("docentes")
-        const docentesRequest = docentesStore.getAll()
-
-        docentesRequest.onsuccess = () => {
-          const docentes = docentesRequest.result
-          let migratedCount = 0
-
-          docentes.forEach((docente: any) => {
-            let updated = false
-
-            // Eliminar campos que ya no se usan
-            if (docente.asignaturasQueImparte) {
-              delete docente.asignaturasQueImparte
-              updated = true
-            }
-
-            if (docente.gradosDisponibles) {
-              delete docente.gradosDisponibles
-              updated = true
-            }
-
-            if (docente.seccionesDisponibles) {
-              delete docente.seccionesDisponibles
-              updated = true
-            }
-
-            // Asegurar que los campos requeridos existan
-            if (!docente.cursosAsignados) {
-              docente.cursosAsignados = []
-              updated = true
-            }
-
-            if (!docente.restricciones) {
-              docente.restricciones = []
-              updated = true
-            }
-
-            if (updated) {
-              docentesStore.put(docente)
-              migratedCount++
-            }
-          })
-
-          console.log(`Migrated ${migratedCount} docentes out of ${docentes.length}`)
-        }
-
-        docentesRequest.onerror = () => {
-          console.error("Error migrating docentes:", docentesRequest.error)
-        }
-      }
-
-      console.log("Migration setup completed")
-    } catch (error) {
-      console.error("Error during migration setup:", error)
-    }
-  }
-
   async save<T>(storeName: string, data: T): Promise<void> {
     if (!this.db) {
       throw new Error("Database not initialized. Call init() first.")
     }
-
     return new Promise((resolve, reject) => {
       try {
         const transaction = this.db!.transaction([storeName], "readwrite")
         const store = transaction.objectStore(storeName)
         const request = store.put(data)
-
-        request.onerror = () => {
-          console.error(`Error saving to ${storeName}:`, request.error)
-          reject(new Error(`Failed to save data: ${request.error?.message || "Unknown error"}`))
-        }
-
+        request.onerror = () => reject(new Error(`Failed to save data: ${request.error?.message || "Unknown error"}`))
         request.onsuccess = () => resolve()
       } catch (error) {
-        console.error(`Error in save operation for ${storeName}:`, error)
         reject(error)
       }
     })
@@ -252,21 +163,14 @@ class DatabaseService {
     if (!this.db) {
       throw new Error("Database not initialized. Call init() first.")
     }
-
     return new Promise((resolve, reject) => {
       try {
         const transaction = this.db!.transaction([storeName], "readonly")
         const store = transaction.objectStore(storeName)
         const request = store.getAll()
-
-        request.onerror = () => {
-          console.error(`Error getting all from ${storeName}:`, request.error)
-          reject(new Error(`Failed to get data: ${request.error?.message || "Unknown error"}`))
-        }
-
+        request.onerror = () => reject(new Error(`Failed to get data: ${request.error?.message || "Unknown error"}`))
         request.onsuccess = () => resolve(request.result || [])
       } catch (error) {
-        console.error(`Error in getAll operation for ${storeName}:`, error)
         reject(error)
       }
     })
@@ -276,21 +180,14 @@ class DatabaseService {
     if (!this.db) {
       throw new Error("Database not initialized. Call init() first.")
     }
-
     return new Promise((resolve, reject) => {
       try {
         const transaction = this.db!.transaction([storeName], "readonly")
         const store = transaction.objectStore(storeName)
         const request = store.get(id)
-
-        request.onerror = () => {
-          console.error(`Error getting ${id} from ${storeName}:`, request.error)
-          reject(new Error(`Failed to get data: ${request.error?.message || "Unknown error"}`))
-        }
-
+        request.onerror = () => reject(new Error(`Failed to get data: ${request.error?.message || "Unknown error"}`))
         request.onsuccess = () => resolve(request.result)
       } catch (error) {
-        console.error(`Error in get operation for ${storeName}:`, error)
         reject(error)
       }
     })
@@ -300,43 +197,54 @@ class DatabaseService {
     if (!this.db) {
       throw new Error("Database not initialized. Call init() first.")
     }
-
     return new Promise((resolve, reject) => {
       try {
         const transaction = this.db!.transaction([storeName], "readwrite")
         const store = transaction.objectStore(storeName)
         const request = store.delete(id)
-
-        request.onerror = () => {
-          console.error(`Error deleting ${id} from ${storeName}:`, request.error)
-          reject(new Error(`Failed to delete data: ${request.error?.message || "Unknown error"}`))
-        }
-
+        request.onerror = () => reject(new Error(`Failed to delete data: ${request.error?.message || "Unknown error"}`))
         request.onsuccess = () => resolve()
       } catch (error) {
-        console.error(`Error in delete operation for ${storeName}:`, error)
         reject(error)
       }
     })
   }
 
-  // Método para limpiar la base de datos en caso de problemas
+  async clearAllStores(): Promise<void> {
+    if (!this.db) {
+      throw new Error("Database not initialized. Call init() first.")
+    }
+    const storeNames = Array.from(this.db.objectStoreNames)
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = this.db!.transaction(storeNames, "readwrite")
+        transaction.onerror = () => {
+          console.error("Error clearing stores:", transaction.error)
+          reject(new Error(`Failed to clear stores: ${transaction.error?.message || "Unknown error"}`))
+        }
+        transaction.oncomplete = () => {
+          console.log("All stores cleared successfully.")
+          resolve()
+        }
+        storeNames.forEach((storeName) => {
+          transaction.objectStore(storeName).clear()
+        })
+      } catch (error) {
+        console.error("Error in clearAllStores operation:", error)
+        reject(error)
+      }
+    })
+  }
+
   async clearDatabase(): Promise<void> {
     return new Promise((resolve, reject) => {
       const deleteRequest = indexedDB.deleteDatabase(this.dbName)
-
       deleteRequest.onsuccess = () => {
-        console.log("Database cleared successfully")
         this.db = null
         this.initPromise = null
         resolve()
       }
-
-      deleteRequest.onerror = () => {
-        console.error("Error clearing database:", deleteRequest.error)
-        reject(deleteRequest.error)
-      }
-
+      deleteRequest.onerror = () => reject(deleteRequest.error)
       deleteRequest.onblocked = () => {
         console.warn("Database deletion blocked. Please close other tabs.")
       }
