@@ -36,7 +36,7 @@ import Link from "next/link"
 
 export default function CursosPage() {
   const { isInitialized } = useDatabase()
-  const { cursos, loading, addCurso, updateCurso, deleteCurso } = useCursos()
+  const { cursos, loading, saveCurso, deleteCurso } = useCursos()
   const { docentes } = useDocentes()
   const { asignaturas } = useAsignaturas()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -64,27 +64,20 @@ export default function CursosPage() {
   // FUNCIÓN PARA ORDENAR CURSOS AUTOMÁTICAMENTE
   const ordenarCursosAutomaticamente = (cursos) => {
     return cursos.sort((a, b) => {
-      // 1. Primero por nivel (primario antes que secundario)
       if (a.nivel !== b.nivel) {
         return a.nivel === "primario" ? -1 : 1
       }
-
-      // 2. Luego por grado (1°, 2°, 3°, etc.)
       const gradoA = Number.parseInt(a.grado?.replace("°", "") || "0")
       const gradoB = Number.parseInt(b.grado?.replace("°", "") || "0")
       if (gradoA !== gradoB) {
         return gradoA - gradoB
       }
-
-      // 3. Finalmente por sección (A, B, C, etc.)
       return (a.seccion || "").localeCompare(b.seccion || "")
     })
   }
 
-  // Aplicar ordenamiento automático
   const cursosOrdenados = ordenarCursosAutomaticamente([...cursos])
 
-  // Calcular estadísticas de horas para cada curso
   const calcularEstadisticasHoras = (curso) => {
     const docentesDelCurso = docentes.filter((docente) =>
       docente.cursosAsignados?.some((ca) => ca.cursoId === curso.id),
@@ -108,7 +101,6 @@ export default function CursosPage() {
       }
     })
 
-    // Calcular horas permitidas (todas las asignaturas disponibles para este curso)
     asignaturas.forEach((asignatura) => {
       const horasSemanales = asignatura.horasPorNivel?.[curso.nivel]?.[curso.grado] || 0
       if (horasSemanales > 0) {
@@ -116,30 +108,22 @@ export default function CursosPage() {
       }
     })
 
-    // Calcular asignaturas faltantes por asignar
     const asignaturasDisponiblesParaGrado = asignaturas.filter((asig) => {
       const horasSemanales = asig.horasPorNivel?.[curso.nivel]?.[curso.grado] || 0
       return horasSemanales > 0
     })
 
     const asignaturasFaltantes = asignaturasDisponiblesParaGrado.filter((asig) => !asignaturasAsignadas.has(asig.id))
-
     const horasFaltantes = Math.max(0, horasPermitidas - horasAsignadas)
-    const horasDisponibles = Math.max(0, 40 - horasAsignadas)
     const excedeLimite = horasAsignadas > 40
 
     return {
       horasAsignadas,
       horasPermitidas,
       horasFaltantes,
-      horasDisponibles,
       excedeLimite,
       asignaturasAsignadas: asignaturasAsignadas.size,
-      totalAsignaturasDisponibles: asignaturas.filter((a) => {
-        const horas = a.horasPorNivel?.[curso.nivel]?.[curso.grado] || 0
-        return horas > 0
-      }).length,
-      asignaturasDisponiblesParaGrado,
+      totalAsignaturasDisponibles: asignaturasDisponiblesParaGrado.length,
       asignaturasFaltantes,
     }
   }
@@ -166,7 +150,9 @@ export default function CursosPage() {
       return
     }
 
-    const nombreDelCurso = `${formData.grado} ${formData.seccion} ${formData.nivel.charAt(0).toUpperCase() + formData.nivel.slice(1)}`
+    const nombreDelCurso = `${formData.grado} ${formData.seccion} ${
+      formData.nivel.charAt(0).toUpperCase() + formData.nivel.slice(1)
+    }`
 
     const cursoExistente = cursos.find(
       (c) => c.nombre === nombreDelCurso && (!editingCurso || c.id !== editingCurso.id),
@@ -182,28 +168,39 @@ export default function CursosPage() {
     }
 
     try {
-      const cursoData = {
-        ...formData,
-        nombre: nombreDelCurso,
-        aula: "",
-        estudiantesMatriculados: Number.parseInt(formData.estudiantesMatriculados) || 0,
-        asignaturas: editingCurso ? editingCurso.asignaturas : [],
-        horasSemanales: editingCurso ? editingCurso.horasSemanales : 0,
-      }
+      let cursoParaGuardar
 
       if (editingCurso) {
-        await updateCurso(editingCurso.id, cursoData)
-        toast({
-          title: "Curso actualizado",
-          description: `El curso ${nombreDelCurso} ha sido actualizado exitosamente.`,
-        })
+        // Actualizar un curso existente
+        cursoParaGuardar = {
+          ...editingCurso,
+          nivel: formData.nivel,
+          grado: formData.grado,
+          seccion: formData.seccion,
+          nombre: nombreDelCurso,
+          estudiantesMatriculados: Number.parseInt(formData.estudiantesMatriculados) || 0,
+        }
       } else {
-        await addCurso(cursoData)
-        toast({
-          title: "Curso creado",
-          description: `El curso ${nombreDelCurso} ha sido creado exitosamente.`,
-        })
+        // Crear un curso nuevo
+        cursoParaGuardar = {
+          id: Date.now().toString(),
+          nombre: nombreDelCurso,
+          nivel: formData.nivel,
+          grado: formData.grado,
+          seccion: formData.seccion,
+          estudiantesMatriculados: Number.parseInt(formData.estudiantesMatriculados) || 0,
+          aula: "",
+          asignaturas: [],
+          horasSemanales: 0,
+        }
       }
+
+      await saveCurso(cursoParaGuardar)
+
+      toast({
+        title: editingCurso ? "Curso Actualizado" : "Curso Creado",
+        description: `El curso ${nombreDelCurso} ha sido guardado exitosamente.`,
+      })
 
       setIsDialogOpen(false)
       resetForm()
