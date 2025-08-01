@@ -1456,9 +1456,7 @@ function AsignacionForm({
           </SelectTrigger>
           <SelectContent>
             {cursosCompatibles.length === 0 ? (
-              <SelectItem value="" disabled>
-                No hay cursos disponibles para el nivel {nivel}
-              </SelectItem>
+              <div className="p-2 text-sm text-muted-foreground">No hay cursos disponibles para el nivel {nivel}.</div>
             ) : (
               cursosCompatibles.map((curso, index) => {
                 if (!curso || !curso.id) return null
