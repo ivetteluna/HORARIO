@@ -33,6 +33,7 @@ import {
 import { useCursos, useDocentes, useAsignaturas, useDatabase } from "@/hooks/useDatabase"
 import { toast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 export default function CursosPage() {
   const { isInitialized } = useDatabase()
@@ -42,7 +43,6 @@ export default function CursosPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCurso, setEditingCurso] = useState(null)
 
-  // Form state
   const [formData, setFormData] = useState({
     nivel: "",
     grado: "",
@@ -61,7 +61,6 @@ export default function CursosPage() {
     )
   }
 
-  // FUNCIÓN PARA ORDENAR CURSOS AUTOMÁTICAMENTE
   const ordenarCursosAutomaticamente = (cursos) => {
     return cursos.sort((a, b) => {
       if (a.nivel !== b.nivel) {
@@ -171,7 +170,6 @@ export default function CursosPage() {
       let cursoParaGuardar
 
       if (editingCurso) {
-        // Actualizar un curso existente
         cursoParaGuardar = {
           ...editingCurso,
           nivel: formData.nivel,
@@ -181,7 +179,6 @@ export default function CursosPage() {
           estudiantesMatriculados: Number.parseInt(formData.estudiantesMatriculados) || 0,
         }
       } else {
-        // Crear un curso nuevo
         cursoParaGuardar = {
           id: Date.now().toString(),
           nombre: nombreDelCurso,
@@ -406,11 +403,11 @@ export default function CursosPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Primaria</p>
-                  <p className="text-3xl font-bold text-emerald-600">
+                  <p className="text-3xl font-bold text-blue-600">
                     {cursosOrdenados.filter((c) => c.nivel === "primario").length}
                   </p>
                 </div>
-                <BookOpen className="h-8 w-8 text-emerald-600 opacity-80" />
+                <BookOpen className="h-8 w-8 text-blue-600 opacity-80" />
               </div>
             </CardContent>
           </Card>
@@ -419,11 +416,11 @@ export default function CursosPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Secundaria</p>
-                  <p className="text-3xl font-bold text-amber-600">
+                  <p className="text-3xl font-bold text-green-600">
                     {cursosOrdenados.filter((c) => c.nivel === "secundario").length}
                   </p>
                 </div>
-                <Users className="h-8 w-8 text-amber-600 opacity-80" />
+                <Users className="h-8 w-8 text-green-600 opacity-80" />
               </div>
             </CardContent>
           </Card>
@@ -461,7 +458,14 @@ export default function CursosPage() {
               )
 
               return (
-                <Card key={curso.id} className="bg-white/90 backdrop-blur-sm hover:shadow-lg transition-shadow">
+                <Card
+                  key={curso.id}
+                  className={cn(
+                    "bg-white/90 backdrop-blur-sm hover:shadow-lg transition-shadow",
+                    curso.nivel === "primario" && "border-2 border-blue-200 bg-blue-50/50",
+                    curso.nivel === "secundario" && "border-2 border-green-200 bg-green-50/50",
+                  )}
+                >
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">

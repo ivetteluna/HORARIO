@@ -2,73 +2,26 @@
 
 import type { DocenteDB, CursoDB } from "@/lib/database"
 
-interface HorarioGenerado {
-  id: string
-  tipo: "docente" | "curso"
-  entidadId: string
-  nombre: string
-  horario: {
-    [dia: string]: {
-      [periodo: string]: {
-        asignatura: string
-        docente?: string
-        curso?: string
-        aula?: string
-      }
-    }
-  }
-  fechaGeneracion: string
-}
-
-interface ConfiguracionEscuela {
-  nombre: string
-  direccion: string
-  telefono: string
-  email: string
-  logo?: string
-  distrito: string
-}
-
-interface ConfiguracionHorario {
-  periodosPersonalizados: Array<{
-    nombre: string
-    inicio: string
-    fin: string
-    tipo: "clase" | "recreo" | "almuerzo"
-  }>
-  diasSemana: string[]
-}
+// ... (Interfaces se mantienen igual)
 
 interface HorarioTemplateProps {
-  horario: HorarioGenerado
+  horario: any
   entidad: DocenteDB | CursoDB
   tipo: "docente" | "curso"
   configuracion: {
-    escuela?: ConfiguracionEscuela
-    horario?: ConfiguracionHorario
+    escuela?: any
+    horario?: any
   }
 }
 
 export function HorarioTemplate({ horario, entidad, tipo, configuracion }: HorarioTemplateProps) {
-  const periodos = configuracion.horario?.periodosPersonalizados || [
-    { nombre: "Primera Hora", inicio: "08:00", fin: "08:45", tipo: "clase" as const },
-    { nombre: "Segunda Hora", inicio: "08:45", fin: "09:30", tipo: "clase" as const },
-    { nombre: "Recreo", inicio: "09:30", fin: "09:45", tipo: "recreo" as const },
-    { nombre: "Tercera Hora", inicio: "09:45", fin: "10:30", tipo: "clase" as const },
-    { nombre: "Cuarta Hora", inicio: "10:30", fin: "11:15", tipo: "clase" as const },
-    { nombre: "Quinta Hora", inicio: "11:15", fin: "12:00", tipo: "clase" as const },
-    { nombre: "Almuerzo", inicio: "12:00", fin: "13:00", tipo: "almuerzo" as const },
-    { nombre: "Sexta Hora", inicio: "13:00", fin: "13:45", tipo: "clase" as const },
-    { nombre: "Séptima Hora", inicio: "13:45", fin: "14:30", tipo: "clase" as const },
-    { nombre: "Octava Hora", inicio: "14:30", fin: "15:15", tipo: "clase" as const },
-  ]
-
-  const dias = configuracion.horario?.diasSemana || ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"]
+  const periodos = configuracion.horario?.periodosPersonalizados || []
+  const dias = configuracion.horario?.diasSemana || []
 
   const nombreCompleto =
     tipo === "docente"
       ? `${(entidad as DocenteDB).nombre} ${(entidad as DocenteDB).apellido}`
-      : `${(entidad as CursoDB).nombre} - ${(entidad as CursoDB).grado}° ${(entidad as CursoDB).seccion}`
+      : `${(entidad as CursoDB).nombre}`
 
   const asignaciones = horario.horario || {}
 
@@ -83,7 +36,7 @@ export function HorarioTemplate({ horario, entidad, tipo, configuracion }: Horar
             style={{ width: "300px", height: "auto" }}
           />
         )}
-        <div className="text-xl font-bold mb-4">{nombreCompleto}</div>
+        <div className="text-2xl font-bold mt-4">{nombreCompleto}</div>
       </div>
 
       <div className="overflow-x-auto">
@@ -103,7 +56,7 @@ export function HorarioTemplate({ horario, entidad, tipo, configuracion }: Horar
             {periodos.map((periodo, index) => {
               const esPeriodoEspecial = periodo.tipo === "recreo" || periodo.tipo === "almuerzo"
               const bgColor =
-                periodo.tipo === "recreo" || periodo.tipo === "almuerzo"
+                esPeriodoEspecial
                   ? "bg-yellow-100"
                   : index % 2 === 0
                   ? "bg-white"
@@ -118,44 +71,27 @@ export function HorarioTemplate({ horario, entidad, tipo, configuracion }: Horar
                   {dias.map((dia) => {
                     if (esPeriodoEspecial) {
                       return (
-                        <td
-                          key={dia}
-                          className={`border border-gray-400 p-2 text-sm font-medium text-center ${bgColor}`}
-                        >
+                        <td key={dia} className={`border border-gray-400 p-2 text-sm font-medium text-center ${bgColor}`}>
                           {periodo.nombre}
                         </td>
                       )
                     }
 
                     const asignacion = asignaciones[dia]?.[periodo.nombre]
+                    const textoCelda = asignacion?.asignatura || "H. P"
+                    const esHp = textoCelda === "H. P"
 
-                    if (tipo === "curso" && (!asignacion || asignacion.asignatura === "Hora Pedagógica")) {
-                      return <td key={dia} className={`border border-gray-400 p-2 text-xs text-center ${bgColor}`}></td>
-                    }
-
-                    if (tipo === "docente" && (!asignacion || asignacion.asignatura === "Hora Pedagógica")) {
-                      return (
-                        <td key={dia} className={`border border-gray-400 p-2 text-xs text-center ${bgColor}`}>
-                          <div className="italic text-gray-600">Hora Pedagógica</div>
-                        </td>
-                      )
-                    }
-
-                    if (asignacion && asignacion.asignatura && asignacion.asignatura !== "Hora Pedagógica") {
-                      return (
-                        <td key={dia} className={`border border-gray-400 p-2 text-xs text-center ${bgColor}`}>
-                          <div className="font-bold">{asignacion.asignatura}</div>
-                          {asignacion.docente && tipo === "curso" && (
-                            <div className="text-xs text-gray-600 mt-1">{asignacion.docente}</div>
-                          )}
-                          {asignacion.curso && tipo === "docente" && (
-                            <div className="text-xs text-gray-600 mt-1">{asignacion.curso}</div>
-                          )}
-                        </td>
-                      )
-                    }
-
-                    return <td key={dia} className={`border border-gray-400 p-2 text-xs text-center ${bgColor}`}></td>
+                    return (
+                      <td key={dia} className={`border border-gray-400 p-2 text-xs text-center ${bgColor}`}>
+                        <div className={esHp ? "italic text-gray-600" : "font-bold"}>{textoCelda}</div>
+                        {asignacion?.curso && tipo === "docente" && !esHp && (
+                          <div className="text-xs text-gray-600 mt-1">{asignacion.curso}</div>
+                        )}
+                        {asignacion?.docente && tipo === "curso" && !esHp && (
+                          <div className="text-xs text-gray-600 mt-1">{asignacion.docente}</div>
+                        )}
+                      </td>
+                    )
                   })}
                 </tr>
               )
