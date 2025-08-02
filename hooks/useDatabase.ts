@@ -11,7 +11,7 @@ export function useDatabase() {
   return { isInitialized }
 }
 
-function useDataStore<T>(storeName: string) {
+function useDataStore<T extends { id: string }>(storeName: string) {
   const { isInitialized } = useDatabase()
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,12 +31,12 @@ function useDataStore<T>(storeName: string) {
 
   const saveData = useCallback(async (item: T) => {
     await database.save(storeName, item)
-    await loadData()
+    await loadData() // <-- Clave: Recargar los datos después de guardar
   }, [storeName, loadData])
 
   const deleteData = useCallback(async (id: string) => {
     await database.delete(storeName, id)
-    await loadData()
+    await loadData() // <-- Clave: Recargar los datos después de eliminar
   }, [storeName, loadData])
 
   useEffect(() => {
