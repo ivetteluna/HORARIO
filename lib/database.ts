@@ -107,10 +107,7 @@ class DatabaseService {
         request.onupgradeneeded = (event) => {
           try {
             const db = (event.target as IDBOpenDBRequest).result
-            const transaction = (event.target as IDBOpenDBRequest).transaction!
-
-            console.log(`Upgrading database from version ${event.oldVersion} to ${event.newVersion}`)
-
+            
             if (!db.objectStoreNames.contains("docentes")) {
               db.createObjectStore("docentes", { keyPath: "id" })
             }
@@ -145,114 +142,62 @@ class DatabaseService {
 
     return this.initPromise
   }
-
+  
   async save<T>(storeName: string, data: T): Promise<void> {
-    if (!this.db) {
-      throw new Error("Database not initialized. Call init() first.")
-    }
+    if (!this.db) throw new Error("Database not initialized.");
     return new Promise((resolve, reject) => {
-      try {
-        const transaction = this.db!.transaction([storeName], "readwrite")
-        const store = transaction.objectStore(storeName)
-        const request = store.put(data)
-        request.onerror = () => reject(new Error(`Failed to save data: ${request.error?.message || "Unknown error"}`))
-        request.onsuccess = () => resolve()
-      } catch (error) {
-        reject(error)
-      }
-    })
+      const transaction = this.db!.transaction(storeName, "readwrite");
+      const store = transaction.objectStore(storeName);
+      const request = store.put(data);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
   }
 
   async getAll<T>(storeName: string): Promise<T[]> {
-    if (!this.db) {
-      throw new Error("Database not initialized. Call init() first.")
-    }
+    if (!this.db) throw new Error("Database not initialized.");
     return new Promise((resolve, reject) => {
-      try {
-        const transaction = this.db!.transaction([storeName], "readonly")
-        const store = transaction.objectStore(storeName)
-        const request = store.getAll()
-        request.onerror = () => reject(new Error(`Failed to get data: ${request.error?.message || "Unknown error"}`))
-        request.onsuccess = () => resolve(request.result || [])
-      } catch (error) {
-        reject(error)
-      }
-    })
+      const transaction = this.db!.transaction(storeName, "readonly");
+      const store = transaction.objectStore(storeName);
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
   }
 
   async get<T>(storeName: string, id: string): Promise<T | undefined> {
-    if (!this.db) {
-      throw new Error("Database not initialized. Call init() first.")
-    }
+    if (!this.db) throw new Error("Database not initialized.");
     return new Promise((resolve, reject) => {
-      try {
-        const transaction = this.db!.transaction([storeName], "readonly")
-        const store = transaction.objectStore(storeName)
-        const request = store.get(id)
-        request.onerror = () => reject(new Error(`Failed to get data: ${request.error?.message || "Unknown error"}`))
-        request.onsuccess = () => resolve(request.result)
-      } catch (error) {
-        reject(error)
-      }
-    })
+      const transaction = this.db!.transaction(storeName, "readonly");
+      const store = transaction.objectStore(storeName);
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
   }
 
   async delete(storeName: string, id: string): Promise<void> {
-    if (!this.db) {
-      throw new Error("Database not initialized. Call init() first.")
-    }
+    if (!this.db) throw new Error("Database not initialized.");
     return new Promise((resolve, reject) => {
-      try {
-        const transaction = this.db!.transaction([storeName], "readwrite")
-        const store = transaction.objectStore(storeName)
-        const request = store.delete(id)
-        request.onerror = () => reject(new Error(`Failed to delete data: ${request.error?.message || "Unknown error"}`))
-        request.onsuccess = () => resolve()
-      } catch (error) {
-        reject(error)
-      }
-    })
+      const transaction = this.db!.transaction(storeName, "readwrite");
+      const store = transaction.objectStore(storeName);
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
   }
 
   async clearAllStores(): Promise<void> {
-    if (!this.db) {
-      throw new Error("Database not initialized. Call init() first.")
-    }
-    const storeNames = Array.from(this.db.objectStoreNames)
+    if (!this.db) throw new Error("Database not initialized.");
+    const storeNames = Array.from(this.db.objectStoreNames);
     return new Promise((resolve, reject) => {
-      try {
-        const transaction = this.db!.transaction(storeNames, "readwrite")
-        transaction.onerror = () => {
-          console.error("Error clearing stores:", transaction.error)
-          reject(new Error(`Failed to clear stores: ${transaction.error?.message || "Unknown error"}`))
-        }
-        transaction.oncomplete = () => {
-          console.log("All stores cleared successfully.")
-          resolve()
-        }
-        storeNames.forEach((storeName) => {
-          transaction.objectStore(storeName).clear()
-        })
-      } catch (error) {
-        console.error("Error in clearAllStores operation:", error)
-        reject(error)
-      }
-    })
-  }
-
-  async clearDatabase(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const deleteRequest = indexedDB.deleteDatabase(this.dbName)
-      deleteRequest.onsuccess = () => {
-        this.db = null
-        this.initPromise = null
-        resolve()
-      }
-      deleteRequest.onerror = () => reject(deleteRequest.error)
-      deleteRequest.onblocked = () => {
-        console.warn("Database deletion blocked. Please close other tabs.")
-      }
-    })
+      const transaction = this.db!.transaction(storeNames, "readwrite");
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      storeNames.forEach(storeName => {
+        transaction.objectStore(storeName).clear();
+      });
+    });
   }
 }
 
