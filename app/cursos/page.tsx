@@ -148,10 +148,11 @@ function CursosPageComponent() {
               <div><Label>Estudiantes</Label><Input type="number" value={formData.estudiantesMatriculados} onChange={e => setFormData(f => ({...f, estudiantesMatriculados: e.target.value}))}/></div>
             </div>
             <div>
-              <Label>Docente Titular</Label>
+              <Label>Docente Titular (Encargado)</Label>
               <Select value={formData.docenteTitular} onValueChange={(v) => setFormData(f => ({...f, docenteTitular: v}))}>
-                <SelectTrigger><SelectValue placeholder="Asignar docente"/></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Asignar un docente titular"/></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">Ninguno</SelectItem>
                   {docentes.filter(d => d.tipo === 'titular').map(d => <SelectItem key={d.id} value={d.id}>{d.nombre} {d.apellido}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -172,11 +173,11 @@ function CursosPageComponent() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {cursosOrdenados.map((curso) => {
-              const docenteTitular = docentes.find(d => d.id === curso.docenteTitular)
+              const docenteTitular = docentes.find(d => d.id === curso.docenteTitular);
               return (
                 <Card key={curso.id} className={cn(
                   "hover:shadow-lg transition-shadow border-2",
-                   curso.nivel === "primario" ? "bg-green-100 border-green-600" : "bg-blue-100 border-blue-600",
+                   curso.nivel === "primario" ? "bg-green-50 border-green-700" : "bg-blue-50 border-blue-700",
                 )}>
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -190,9 +191,15 @@ function CursosPageComponent() {
                   </CardHeader>
                   <CardContent>
                     {docenteTitular ? (
-                        <div className="text-sm font-medium flex items-center gap-2"><Users className="h-4 w-4"/> Titular: {docenteTitular.nombre} {docenteTitular.apellido}</div>
+                        <div className="text-sm font-medium flex items-center gap-2 p-2 bg-white rounded border">
+                            <Users className="h-4 w-4 text-gray-600"/> 
+                            <span>Titular: {docenteTitular.nombre} {docenteTitular.apellido}</span>
+                        </div>
                     ) : (
-                        <div className="text-sm text-amber-700 flex items-center gap-2"><AlertTriangle className="h-4 w-4"/> Sin titular asignado</div>
+                        <div className="text-sm text-amber-800 flex items-center gap-2 p-2 bg-amber-100 rounded border border-amber-300">
+                            <AlertTriangle className="h-4 w-4"/> 
+                            <span>Sin titular asignado</span>
+                        </div>
                     )}
                   </CardContent>
                 </Card>
@@ -205,17 +212,7 @@ function CursosPageComponent() {
   );
 }
 
-const DynamicCursosPage = dynamic(() => Promise.resolve(CursosPageComponent), {
-    ssr: false,
-    loading: () => (
-        <div className="flex h-screen items-center justify-center">
-            <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Cargando Módulo de Cursos...</p>
-            </div>
-        </div>
-    )
-});
+const DynamicCursosPage = dynamic(() => Promise.resolve(CursosPageComponent), { ssr: false });
 
 export default function CursosPage() {
     return (

@@ -113,6 +113,10 @@ function AsignaturasList({ asignaturas, onEdit, onDelete }: any) {
                     </CardHeader>
                     <CardContent>
                        <p className="text-sm text-gray-600 h-12">{asignatura.descripcion}</p>
+                       <div className="text-xs text-gray-500 mt-4 border-t pt-2">
+                           <p>Horas Primaria: {Object.values(asignatura.horasPorNivel.primario).reduce((a: number, b: number) => a + b, 0)}h</p>
+                           <p>Horas Secundaria: {Object.values(asignatura.horasPorNivel.secundario).reduce((a: number, b: number) => a + b, 0)}h</p>
+                       </div>
                     </CardContent>
                 </Card>
             ))}

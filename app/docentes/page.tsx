@@ -16,12 +16,11 @@ import {
   Users,
   Mail,
   Phone,
-  BookOpen,
   GraduationCap,
-  X,
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  X
 } from "lucide-react"
 import { useDocentes, useAsignaturas, useCursos, useDatabase, useConfiguracion } from "@/hooks/useDatabase"
 import { useNiveles } from "@/hooks/useNiveles"
@@ -35,6 +34,16 @@ const especialidadesComunes = [
   "Ciencias Sociales", "Educación Física", "Educación Artística", "Inglés",
   "Francés", "Informática", "Orientación y Psicología", "Biblioteca",
 ];
+
+const ordenarCursosAutomaticamente = (cursos: any[]) => {
+  return [...cursos].sort((a, b) => {
+    if (a.nivel !== b.nivel) return a.nivel === "primario" ? -1 : 1;
+    const gradoA = parseInt(a.grado?.replace("°", "") || "0");
+    const gradoB = parseInt(b.grado?.replace("°", "") || "0");
+    if (gradoA !== gradoB) return gradoA - gradoB;
+    return (a.seccion || "").localeCompare(b.seccion || "");
+  });
+};
 
 function DocentesPageComponent() {
   const { isInitialized } = useDatabase();
@@ -126,7 +135,7 @@ function DocentesList({ docentes, cursos, asignaturas, onEdit, onDelete }: any) 
     };
     
     if (docentes.length === 0) {
-        return <div className="text-center text-gray-500 py-10">No hay docentes registrados.</div>
+        return <div className="text-center text-gray-500 py-10">No hay docentes registrados. Haz clic en "Agregar Docente" para empezar.</div>
     }
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -253,7 +262,7 @@ function DocenteForm({ docente, cursos, asignaturas, configuracionHorario, onSav
                   </Select>
                 </div>
             </div>
-            
+
             <div className="space-y-4 rounded-lg border bg-gray-50 p-4">
                 <h3 className="text-lg font-medium text-gray-900">Restricciones de Horario</h3>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-4 items-end">
@@ -271,14 +280,14 @@ function DocenteForm({ docente, cursos, asignaturas, configuracionHorario, onSav
                          <Select value={nuevaRestriccion.periodo} onValueChange={(v) => setNuevaRestriccion(p => ({...p, periodo: v}))}>
                             <SelectTrigger><SelectValue placeholder="Período" /></SelectTrigger>
                             <SelectContent>
-                                {periodosDeClase.map(p => <SelectItem key={p.nombre} value={p.nombre}>{p.nombre}</SelectItem>)}
+                                {periodosDeClase.map(p => <SelectItem key={p.nombre} value={p.nombre}>{p.nombre} ({p.inicio} - {p.fin})</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
                     <div className="space-y-2 md:col-span-2">
                         <Label>Actividad</Label>
                         <div className="flex gap-2">
-                            <Input value={nuevaRestriccion.actividad} onChange={e => setNuevaRestriccion(p => ({...p, actividad: e.target.value}))} />
+                            <Input value={nuevaRestriccion.actividad} onChange={e => setNuevaRestriccion(p => ({...p, actividad: e.target.value}))} placeholder="Escribe la actividad..."/>
                             <Button type="button" onClick={agregarRestriccion}><Plus className="h-4 w-4"/></Button>
                         </div>
                     </div>
@@ -310,7 +319,6 @@ function DocenteForm({ docente, cursos, asignaturas, configuracionHorario, onSav
 }
 
 const DynamicDocentesPage = dynamic(() => Promise.resolve(DocentesPageComponent), { ssr: false });
-
 export default function DocentesPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-cyan-100 p-6">
