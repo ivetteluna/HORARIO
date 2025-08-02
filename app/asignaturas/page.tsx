@@ -90,7 +90,7 @@ function AsignaturasPageComponent() {
   );
 }
 
-function AsignaturasList({ asignaturas, onEdit, onDelete }: { asignaturas: AsignaturaDB[], onEdit: (a: AsignaturaDB) => void, onDelete: (id: string) => void }) {
+function AsignaturasList({ asignaturas, onEdit, onDelete }: any) {
     if (asignaturas.length === 0) {
         return <p className="text-center text-gray-500 py-10">No hay asignaturas registradas.</p>
     }
@@ -100,16 +100,19 @@ function AsignaturasList({ asignaturas, onEdit, onDelete }: { asignaturas: Asign
                 <Card key={asignatura.id} style={{ borderTop: `4px solid ${asignatura.color}` }}>
                     <CardHeader>
                         <CardTitle className="flex justify-between items-start">
-                           <span>{asignatura.nombre}</span>
+                           <span className="flex items-center gap-2">
+                               <div className="w-3 h-3 rounded-full" style={{backgroundColor: asignatura.color}}></div>
+                               {asignatura.nombre}
+                           </span>
                            <div>
-                                <Button variant="ghost" size="icon" onClick={() => onEdit(asignatura)}><Edit className="h-4 w-4"/></Button>
-                                <Button variant="ghost" size="icon" onClick={() => onDelete(asignatura.id)}><Trash2 className="h-4 w-4"/></Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(asignatura)}><Edit className="h-4 w-4"/></Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(asignatura.id)}><Trash2 className="h-4 w-4"/></Button>
                             </div>
                         </CardTitle>
-                        <CardDescription>{asignatura.codigo}</CardDescription>
+                        <CardDescription>Código: <Badge variant="secondary">{asignatura.codigo}</Badge></CardDescription>
                     </CardHeader>
                     <CardContent>
-                       <p className="text-sm text-gray-600">{asignatura.descripcion}</p>
+                       <p className="text-sm text-gray-600 h-12">{asignatura.descripcion}</p>
                     </CardContent>
                 </Card>
             ))}
@@ -159,17 +162,17 @@ function AsignaturaForm({ asignatura, niveles, onSave, onCancel }: any) {
         <div>
             <Label>Color</Label>
             <div className="flex gap-2 mt-2">
-                {colores.map(c => <button type="button" key={c} onClick={() => setFormData(f => ({...f, color: c}))} className={`w-8 h-8 rounded-full border-2 ${formData.color === c ? 'border-gray-800' : 'border-gray-300'}`} style={{backgroundColor: c}} />)}
+                {colores.map(c => <button type="button" key={c} onClick={() => setFormData(f => ({...f, color: c}))} className={`w-8 h-8 rounded-full border-2 ${formData.color === c ? 'border-blue-600 ring-2 ring-blue-300' : 'border-gray-300'}`} style={{backgroundColor: c}} />)}
             </div>
         </div>
         
       {niveles.map(nivel => (
-          <div key={nivel.id} className="space-y-3">
-              <h4 className="font-medium">{nivel.nombre}</h4>
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          <div key={nivel.id} className="p-4 border rounded-lg">
+              <h4 className="font-medium mb-4">{nivel.nombre}</h4>
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
                   {nivel.grados.map(grado => (
                       <div key={grado} className="space-y-1 text-center">
-                          <Label className="text-sm">{grado}</Label>
+                          <Label className="text-sm font-medium">{grado}</Label>
                           <Input type="number" min="0" className="text-center" value={formData.horasPorNivel[nivel.id]?.[grado] || 0} onChange={e => updateHoras(nivel.id, grado, e.target.value)} />
                       </div>
                   ))}
@@ -185,24 +188,14 @@ function AsignaturaForm({ asignatura, niveles, onSave, onCancel }: any) {
   );
 }
 
-const DynamicAsignaturasPage = dynamic(() => Promise.resolve(AsignaturasPageComponent), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full items-center justify-center p-6">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Cargando Módulo de Asignaturas...</p>
-      </div>
-    </div>
-  )
-});
+const DynamicAsignaturasPage = dynamic(() => Promise.resolve(AsignaturasPageComponent), { ssr: false, /* ... */ });
 
 export default function AsignaturasPage() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-cyan-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        <DynamicAsignaturasPage />
-      </div>
-    </div>
-  );
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-cyan-100 p-6">
+            <div className="max-w-7xl mx-auto">
+                <DynamicAsignaturasPage />
+            </div>
+        </div>
+    );
 }
