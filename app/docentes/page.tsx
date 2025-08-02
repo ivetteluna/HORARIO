@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Plus,
   Edit,
@@ -26,7 +27,7 @@ import { useDocentes, useAsignaturas, useCursos, useDatabase, useConfiguracion }
 import { useNiveles } from "@/hooks/useNiveles"
 import type { DocenteDB } from "@/lib/database"
 import { toast } from "@/hooks/use-toast"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 
 const especialidadesComunes = [
@@ -79,19 +80,19 @@ function DocentesPageComponent() {
   return (
     <>
       <div className="mb-8 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <Users className="h-8 w-8 text-indigo-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Gestión de Docentes</h1>
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <Users className="h-8 w-8 text-indigo-600" />
+              <h1 className="text-3xl font-bold text-gray-900">Gestión de Docentes</h1>
+            </div>
+            <p className="text-gray-600">
+              Organiza, asigna y gestiona el personal docente de la institución.
+            </p>
           </div>
-          <p className="text-gray-600">
-            Organiza, asigna y gestiona el personal docente de la institución.
-          </p>
-        </div>
-        <Button onClick={() => { setEditingDocente(null); setIsDialogOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar Docente
-        </Button>
+          <Button onClick={() => { setEditingDocente(null); setIsDialogOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Docente
+          </Button>
       </div>
 
       <DocentesList docentes={docentes} cursos={cursos} asignaturas={asignaturas} onEdit={handleEdit} onDelete={handleDelete} />
@@ -120,16 +121,12 @@ function DocentesList({ docentes, cursos, asignaturas, onEdit, onDelete }: any) 
 
     const toggleExpanded = (docenteId: string) => {
         const newExpanded = new Set(expandedDocentes);
-        if (newExpanded.has(docenteId)) {
-            newExpanded.delete(docenteId);
-        } else {
-            newExpanded.add(docenteId);
-        }
+        newExpanded.has(docenteId) ? newExpanded.delete(docenteId) : newExpanded.add(docenteId);
         setExpandedDocentes(newExpanded);
     };
     
     if (docentes.length === 0) {
-        return <div className="text-center text-gray-500 py-10">No hay docentes registrados. Haz clic en "Agregar Docente" para empezar.</div>
+        return <div className="text-center text-gray-500 py-10">No hay docentes registrados.</div>
     }
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -137,7 +134,7 @@ function DocentesList({ docentes, cursos, asignaturas, onEdit, onDelete }: any) 
                 <Card key={docente.id} className="flex flex-col">
                     <CardHeader>
                         <CardTitle className="flex justify-between items-start">
-                           <span>{docente.nombre} {docente.apellido}</span>
+                           <span className="text-lg">{docente.nombre} {docente.apellido}</span>
                            <div className="flex-shrink-0">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(docente)}><Edit className="h-4 w-4"/></Button>
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(docente.id)}><Trash2 className="h-4 w-4"/></Button>
@@ -155,9 +152,9 @@ function DocentesList({ docentes, cursos, asignaturas, onEdit, onDelete }: any) 
                            <Badge variant="outline">{docente.nivel}</Badge>
                         </div>
                         {docente.cursosAsignados && docente.cursosAsignados.length > 0 && (
-                            <div>
+                            <div className="pt-2 border-t">
                                 <div className="flex items-center justify-between">
-                                    <h4 className="font-semibold text-sm">Asignaciones</h4>
+                                    <h4 className="font-semibold text-sm">Asignaciones ({docente.cursosAsignados.length})</h4>
                                     <Button variant="ghost" size="sm" onClick={() => toggleExpanded(docente.id)}>
                                         {expandedDocentes.has(docente.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </Button>
@@ -172,7 +169,7 @@ function DocentesList({ docentes, cursos, asignaturas, onEdit, onDelete }: any) 
                                                     <div className="flex flex-wrap gap-1 mt-1">
                                                         {ca.asignaturas.map(asigId => {
                                                             const asig = asignaturas.find(a => a.id === asigId);
-                                                            return <Badge key={asigId} variant="secondary" style={{backgroundColor: asig?.color, color: 'white'}}>{asig?.codigo}</Badge>
+                                                            return <Badge key={asigId} variant="secondary" style={{backgroundColor: asig?.color, color: 'white', fontSize: '10px'}}>{asig?.codigo}</Badge>
                                                         })}
                                                     </div>
                                                 </div>
@@ -204,14 +201,32 @@ function DocenteForm({ docente, cursos, asignaturas, configuracionHorario, onSav
         restricciones: docente?.restricciones ? JSON.parse(JSON.stringify(docente.restricciones)) : [],
     });
     const [nuevaRestriccion, setNuevaRestriccion] = useState({ dia: "", periodo: "", actividad: "" });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const id = docente?.id || Date.now().toString();
+        onSave({ ...formData, id });
+    };
+
+    const agregarRestriccion = () => {
+        if (nuevaRestriccion.dia && nuevaRestriccion.periodo && nuevaRestriccion.actividad) {
+            setFormData(prev => ({ ...prev, restricciones: [...(prev.restricciones || []), nuevaRestriccion] }));
+            setNuevaRestriccion({ dia: "", periodo: "", actividad: "" });
+        } else {
+            toast({ title: "Campos Incompletos", variant: "destructive" });
+        }
+    };
     
-    // ... el resto de la lógica del formulario se mantiene igual
+    const eliminarRestriccion = (index: number) => {
+        setFormData(prev => ({ ...prev, restricciones: prev.restricciones?.filter((_, i) => i !== index) }));
+    };
+
+    const periodosDeClase = configuracionHorario?.periodosPersonalizados?.filter(p => p.tipo === "clase") || [];
 
     return (
-        <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="space-y-6">
-            {/* Información Personal */}
+        <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Información Personal</h3>
+                <h3 className="text-lg font-medium">Información Personal</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div><Label>Nombre *</Label><Input required value={formData.nombre} onChange={e => setFormData(f => ({...f, nombre: e.target.value}))} /></div>
                     <div><Label>Apellido *</Label><Input required value={formData.apellido} onChange={e => setFormData(f => ({...f, apellido: e.target.value}))} /></div>
@@ -221,28 +236,72 @@ function DocenteForm({ docente, cursos, asignaturas, configuracionHorario, onSav
                 </div>
             </div>
             
-            {/* Información Profesional */}
             <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Información Profesional</h3>
+                <h3 className="text-lg font-medium">Información Profesional</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <div><Label>Tipo</Label><Select value={formData.tipo} onValueChange={v => setFormData(f => ({...f, tipo: v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="titular">Titular</SelectItem><SelectItem value="area">De Área</SelectItem></SelectContent></Select></div>
                      <div><Label>Nivel</Label><Select value={formData.nivel} onValueChange={v => setFormData(f => ({...f, nivel: v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="primario">Primario</SelectItem><SelectItem value="secundario">Secundario</SelectItem><SelectItem value="ambos">Ambos</SelectItem></SelectContent></Select></div>
-                     <div><Label>Horas Disponibles</Label><Input type="number" value={formData.horasDisponibles} onChange={e => setFormData(f => ({...f, horasDisponibles: parseInt(e.target.value)}))} /></div>
+                     <div><Label>Horas Disponibles</Label><Input type="number" value={formData.horasDisponibles} onChange={e => setFormData(f => ({...f, horasDisponibles: parseInt(e.target.value) || 0}))} /></div>
+                </div>
+                <div>
+                  <Label>Especialidad</Label>
+                  <Select value={formData.especialidad} onValueChange={v => setFormData(f => ({...f, especialidad: v}))}>
+                      <SelectTrigger><SelectValue placeholder="Selecciona una especialidad"/></SelectTrigger>
+                      <SelectContent>
+                          {especialidadesComunes.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
                 </div>
             </div>
-
-            {/* Restricciones */}
+            
             <div className="space-y-4 rounded-lg border bg-gray-50 p-4">
-                {/* ... el JSX de las restricciones se mantiene igual ... */}
+                <h3 className="text-lg font-medium text-gray-900">Restricciones de Horario</h3>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4 items-end">
+                    <div className="space-y-2">
+                        <Label>Día</Label>
+                        <Select value={nuevaRestriccion.dia} onValueChange={(v) => setNuevaRestriccion(p => ({...p, dia: v}))}>
+                            <SelectTrigger><SelectValue placeholder="Día" /></SelectTrigger>
+                            <SelectContent>
+                                {configuracionHorario?.diasSemana.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Período</Label>
+                         <Select value={nuevaRestriccion.periodo} onValueChange={(v) => setNuevaRestriccion(p => ({...p, periodo: v}))}>
+                            <SelectTrigger><SelectValue placeholder="Período" /></SelectTrigger>
+                            <SelectContent>
+                                {periodosDeClase.map(p => <SelectItem key={p.nombre} value={p.nombre}>{p.nombre}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                        <Label>Actividad</Label>
+                        <div className="flex gap-2">
+                            <Input value={nuevaRestriccion.actividad} onChange={e => setNuevaRestriccion(p => ({...p, actividad: e.target.value}))} />
+                            <Button type="button" onClick={agregarRestriccion}><Plus className="h-4 w-4"/></Button>
+                        </div>
+                    </div>
+                </div>
+                {formData.restricciones && formData.restricciones.length > 0 && (
+                    <div className="space-y-2 pt-4">
+                        <div className="max-h-40 overflow-y-auto space-y-2 rounded-md border p-2">
+                            {formData.restricciones.map((r, index) => (
+                                <div key={index} className="flex items-center justify-between rounded-md bg-white p-2 text-sm">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <Badge variant="secondary">{r.dia}</Badge>
+                                        <Badge variant="outline">{r.periodo}</Badge>
+                                        <span>{r.actividad}</span>
+                                    </div>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => eliminarRestriccion(index)}><X className="h-4 w-4" /></Button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
-
-            {/* Asignaciones (simplificado para brevedad, la lógica completa debe estar aquí) */}
-            <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Asignaciones</h3>
-                {/* ... Aquí va la lógica compleja para agregar y mostrar asignaciones de cursos y asignaturas ... */}
-            </div>
-
-            <div className="flex justify-end gap-4">
+            
+            <div className="flex justify-end gap-4 border-t pt-4">
                 <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
                 <Button type="submit">{docente ? "Guardar Cambios" : "Agregar Docente"}</Button>
             </div>
@@ -250,7 +309,8 @@ function DocenteForm({ docente, cursos, asignaturas, configuracionHorario, onSav
     );
 }
 
-const DynamicDocentesPage = dynamic(() => Promise.resolve(DocentesPageComponent), { ssr: false, /* ... */ });
+const DynamicDocentesPage = dynamic(() => Promise.resolve(DocentesPageComponent), { ssr: false });
+
 export default function DocentesPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-cyan-100 p-6">

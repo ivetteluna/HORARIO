@@ -28,7 +28,7 @@ function AsignaturasPageComponent() {
 
   if (!isInitialized || loading) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Cargando asignaturas...</p>
@@ -161,7 +161,7 @@ function AsignaturaForm({ asignatura, niveles, onSave, onCancel }: any) {
         <div><Label>Descripción</Label><Input value={formData.descripcion} onChange={e => setFormData(f => ({...f, descripcion: e.target.value}))} /></div>
         <div>
             <Label>Color</Label>
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2 mt-2 flex-wrap">
                 {colores.map(c => <button type="button" key={c} onClick={() => setFormData(f => ({...f, color: c}))} className={`w-8 h-8 rounded-full border-2 ${formData.color === c ? 'border-blue-600 ring-2 ring-blue-300' : 'border-gray-300'}`} style={{backgroundColor: c}} />)}
             </div>
         </div>
@@ -188,7 +188,7 @@ function AsignaturaForm({ asignatura, niveles, onSave, onCancel }: any) {
   );
 }
 
-const DynamicAsignaturasPage = dynamic(() => Promise.resolve(AsignaturasPageComponent), { ssr: false, /* ... */ });
+const DynamicAsignaturasPage = dynamic(() => Promise.resolve(AsignaturasPageComponent), { ssr: false });
 
 export default function AsignaturasPage() {
     return (
