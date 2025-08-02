@@ -15,8 +15,6 @@ import {
   Users,
   Mail,
   Phone,
-  BookOpen,
-  GraduationCap,
   X,
 } from "lucide-react"
 import { useDocentes, useAsignaturas, useCursos, useDatabase, useConfiguracion } from "@/hooks/useDatabase"
@@ -54,7 +52,7 @@ function DocentesPageComponent() {
     );
   }
 
-  const handleSaveDocente = async (docenteData: DocenteDB) => {
+  const handleSave = async (docenteData: DocenteDB) => {
     await saveDocente(docenteData);
     setIsDialogOpen(false);
     toast({ title: "Éxito", description: "Docente guardado correctamente." });
@@ -63,6 +61,13 @@ function DocentesPageComponent() {
   const handleEdit = (docente: DocenteDB) => {
     setEditingDocente(docente);
     setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("¿Estás seguro de que deseas eliminar este docente?")) {
+      await deleteDocente(id);
+      toast({ title: "Éxito", description: "Docente eliminado." });
+    }
   };
 
   return (
@@ -83,17 +88,20 @@ function DocentesPageComponent() {
           </Button>
       </div>
 
-      <DocentesList docentes={docentes} onEdit={handleEdit} onDelete={deleteDocente} />
+      <DocentesList docentes={docentes} onEdit={handleEdit} onDelete={handleDelete} />
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDocente ? "Editar Docente" : "Agregar Docente"}</DialogTitle>
+            <DialogDescription>
+              {editingDocente ? "Modifica la información del docente" : "Ingresa la información del nuevo docente"}
+            </DialogDescription>
           </DialogHeader>
           <DocenteForm
             docente={editingDocente}
             configuracionHorario={configuracionHorario}
-            onSave={handleSaveDocente}
+            onSave={handleSave}
             onCancel={() => setIsDialogOpen(false)}
           />
         </DialogContent>
@@ -104,25 +112,25 @@ function DocentesPageComponent() {
 
 function DocentesList({ docentes, onEdit, onDelete }: { docentes: DocenteDB[], onEdit: (docente: DocenteDB) => void, onDelete: (id: string) => void }) {
     if (docentes.length === 0) {
-        return <p className="text-center text-gray-500 py-10">No hay docentes registrados.</p>
+        return <div className="text-center text-gray-500 py-10">No hay docentes registrados. Haz clic en "Agregar Docente" para empezar.</div>
     }
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {docentes.map(docente => (
                 <Card key={docente.id}>
                     <CardHeader>
-                        <CardTitle className="flex justify-between items-center">
-                            {docente.nombre} {docente.apellido}
-                            <div>
-                                <Button variant="ghost" size="icon" onClick={() => onEdit(docente)}><Edit className="h-4 w-4"/></Button>
-                                <Button variant="ghost" size="icon" onClick={() => onDelete(docente.id)}><Trash2 className="h-4 w-4"/></Button>
+                        <CardTitle className="flex justify-between items-start">
+                            <span>{docente.nombre} {docente.apellido}</span>
+                            <div className="flex-shrink-0">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(docente)}><Edit className="h-4 w-4"/></Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(docente.id)}><Trash2 className="h-4 w-4"/></Button>
                             </div>
                         </CardTitle>
                         <CardDescription>{docente.especialidad}</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-sm"><Mail className="inline h-4 w-4 mr-2"/>{docente.email}</p>
-                        <p className="text-sm"><Phone className="inline h-4 w-4 mr-2"/>{docente.telefono}</p>
+                    <CardContent className="space-y-2">
+                        <p className="text-sm flex items-center gap-2"><Mail className="h-4 w-4 text-gray-500"/>{docente.email || 'No disponible'}</p>
+                        <p className="text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-gray-500"/>{docente.telefono || 'No disponible'}</p>
                     </CardContent>
                 </Card>
             ))}
@@ -131,10 +139,121 @@ function DocentesList({ docentes, onEdit, onDelete }: { docentes: DocenteDB[], o
 }
 
 function DocenteForm({ docente, configuracionHorario, onSave, onCancel }: any) {
-    // ... El formulario de docentes se mantiene igual
+    const [formData, setFormData] = useState<Partial<DocenteDB>>({
+        nombre: docente?.nombre || "",
+        apellido: docente?.apellido || "",
+        cedula: docente?.cedula || "",
+        especialidad: docente?.especialidad || especialidadesComunes[0],
+        email: docente?.email || "",
+        telefono: docente?.telefono || "",
+        tipo: docente?.tipo || "titular",
+        nivel: docente?.nivel || "primario",
+        horasDisponibles: docente?.horasDisponibles || 40,
+        cursosAsignados: docente?.cursosAsignados ? JSON.parse(JSON.stringify(docente.cursosAsignados)) : [],
+        restricciones: docente?.restricciones ? JSON.parse(JSON.stringify(docente.restricciones)) : [],
+    });
+    const [nuevaRestriccion, setNuevaRestriccion] = useState({ dia: "", periodo: "", actividad: "" });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const id = docente?.id || Date.now().toString();
+        onSave({ ...formData, id });
+    };
+
+    const agregarRestriccion = () => {
+        if (nuevaRestriccion.dia && nuevaRestriccion.periodo && nuevaRestriccion.actividad) {
+            setFormData(prev => ({ ...prev, restricciones: [...(prev.restricciones || []), nuevaRestriccion] }));
+            setNuevaRestriccion({ dia: "", periodo: "", actividad: "" });
+        } else {
+            toast({ title: "Campos Incompletos", variant: "destructive" });
+        }
+    };
+    
+    const eliminarRestriccion = (index: number) => {
+        setFormData(prev => ({ ...prev, restricciones: prev.restricciones?.filter((_, i) => i !== index) }));
+    };
+
+    const periodosDeClase = configuracionHorario?.periodosPersonalizados?.filter(p => p.tipo === "clase") || [];
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900">Información Personal</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><Label>Nombre *</Label><Input value={formData.nombre} onChange={e => setFormData(f => ({...f, nombre: e.target.value}))} /></div>
+                    <div><Label>Apellido *</Label><Input value={formData.apellido} onChange={e => setFormData(f => ({...f, apellido: e.target.value}))} /></div>
+                    <div><Label>Cédula *</Label><Input value={formData.cedula} onChange={e => setFormData(f => ({...f, cedula: e.target.value}))} /></div>
+                    <div><Label>Teléfono</Label><Input value={formData.telefono} onChange={e => setFormData(f => ({...f, telefono: e.target.value}))} /></div>
+                    <div className="md:col-span-2"><Label>Email</Label><Input type="email" value={formData.email} onChange={e => setFormData(f => ({...f, email: e.target.value}))} /></div>
+                </div>
+            </div>
+            
+            <div className="space-y-4 rounded-lg border bg-gray-50 p-4">
+                <h3 className="text-lg font-medium text-gray-900">Restricciones de Horario</h3>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4 items-end">
+                    <div className="space-y-2">
+                        <Label>Día</Label>
+                        <Select value={nuevaRestriccion.dia} onValueChange={(v) => setNuevaRestriccion(p => ({...p, dia: v}))}>
+                            <SelectTrigger><SelectValue placeholder="Día" /></SelectTrigger>
+                            <SelectContent>
+                                {configuracionHorario?.diasSemana.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Período</Label>
+                         <Select value={nuevaRestriccion.periodo} onValueChange={(v) => setNuevaRestriccion(p => ({...p, periodo: v}))}>
+                            <SelectTrigger><SelectValue placeholder="Período" /></SelectTrigger>
+                            <SelectContent>
+                                {periodosDeClase.map(p => <SelectItem key={p.nombre} value={p.nombre}>{p.nombre}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                        <Label>Actividad</Label>
+                        <div className="flex gap-2">
+                            <Input value={nuevaRestriccion.actividad} onChange={e => setNuevaRestriccion(p => ({...p, actividad: e.target.value}))} />
+                            <Button type="button" onClick={agregarRestriccion}><Plus className="h-4 w-4"/></Button>
+                        </div>
+                    </div>
+                </div>
+                {formData.restricciones && formData.restricciones.length > 0 && (
+                    <div className="space-y-2 pt-4">
+                        <div className="max-h-40 overflow-y-auto space-y-2 rounded-md border p-2">
+                            {formData.restricciones.map((r, index) => (
+                                <div key={index} className="flex items-center justify-between rounded-md bg-white p-2 text-sm">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <Badge variant="secondary">{r.dia}</Badge>
+                                        <Badge variant="outline">{r.periodo}</Badge>
+                                        <span>{r.actividad}</span>
+                                    </div>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => eliminarRestriccion(index)}><X className="h-4 w-4" /></Button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+            
+            <div className="flex justify-end gap-4">
+                <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
+                <Button type="submit">{docente ? "Guardar Cambios" : "Agregar Docente"}</Button>
+            </div>
+        </form>
+    );
 }
 
-const DynamicDocentesPage = dynamic(() => Promise.resolve(DocentesPageComponent), { ssr: false, /* ... */ });
+const DynamicDocentesPage = dynamic(() => Promise.resolve(DocentesPageComponent), {
+    ssr: false,
+    loading: () => (
+        <div className="flex h-full items-center justify-center p-6">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Cargando Módulo de Docentes...</p>
+            </div>
+        </div>
+    )
+});
 
 export default function DocentesPage() {
     return (

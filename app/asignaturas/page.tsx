@@ -47,6 +47,13 @@ function AsignaturasPageComponent() {
     setEditingAsignatura(asignatura);
     setIsDialogOpen(true);
   };
+  
+  const handleDelete = async (id: string) => {
+      if(confirm("¿Seguro que deseas eliminar esta asignatura?")) {
+          await deleteAsignatura(id);
+          toast({ title: "Asignatura eliminada."});
+      }
+  }
 
   return (
     <>
@@ -64,7 +71,7 @@ function AsignaturasPageComponent() {
         </Button>
       </div>
 
-      <AsignaturasList asignaturas={asignaturas} onEdit={handleEdit} onDelete={deleteAsignatura} />
+      <AsignaturasList asignaturas={asignaturas} onEdit={handleEdit} onDelete={handleDelete} />
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -83,29 +90,26 @@ function AsignaturasPageComponent() {
   );
 }
 
-function AsignaturasList({ asignaturas, onEdit, onDelete }: { asignaturas: AsignaturaDB[], onEdit: (asignatura: AsignaturaDB) => void, onDelete: (id: string) => void }) {
+function AsignaturasList({ asignaturas, onEdit, onDelete }: { asignaturas: AsignaturaDB[], onEdit: (a: AsignaturaDB) => void, onDelete: (id: string) => void }) {
     if (asignaturas.length === 0) {
         return <p className="text-center text-gray-500 py-10">No hay asignaturas registradas.</p>
     }
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {asignaturas.map(asignatura => (
-                <Card key={asignatura.id} style={{ borderColor: asignatura.color }}>
+                <Card key={asignatura.id} style={{ borderTop: `4px solid ${asignatura.color}` }}>
                     <CardHeader>
-                        <CardTitle className="flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 rounded-full" style={{backgroundColor: asignatura.color}}></div>
-                                {asignatura.nombre}
-                            </div>
-                            <div>
+                        <CardTitle className="flex justify-between items-start">
+                           <span>{asignatura.nombre}</span>
+                           <div>
                                 <Button variant="ghost" size="icon" onClick={() => onEdit(asignatura)}><Edit className="h-4 w-4"/></Button>
                                 <Button variant="ghost" size="icon" onClick={() => onDelete(asignatura.id)}><Trash2 className="h-4 w-4"/></Button>
                             </div>
                         </CardTitle>
-                        <CardDescription>Código: {asignatura.codigo}</CardDescription>
+                        <CardDescription>{asignatura.codigo}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm">{asignatura.descripcion}</p>
+                       <p className="text-sm text-gray-600">{asignatura.descripcion}</p>
                     </CardContent>
                 </Card>
             ))}
@@ -114,17 +118,91 @@ function AsignaturasList({ asignaturas, onEdit, onDelete }: { asignaturas: Asign
 }
 
 function AsignaturaForm({ asignatura, niveles, onSave, onCancel }: any) {
-    // ... El formulario de asignaturas se mantiene igual
-}
+  const [formData, setFormData] = useState<Partial<AsignaturaDB>>({
+    nombre: asignatura?.nombre || "",
+    codigo: asignatura?.codigo || "",
+    descripcion: asignatura?.descripcion || "",
+    color: asignatura?.color || colores[0],
+    tipo: asignatura?.tipo || "basica",
+    horasPorNivel: asignatura?.horasPorNivel || {
+      primario: { "1°": 0, "2°": 0, "3°": 0, "4°": 0, "5°": 0, "6°": 0 },
+      secundario: { "1°": 0, "2°": 0, "3°": 0, "4°": 0, "5°": 0, "6°": 0 },
+    },
+  });
 
-const DynamicAsignaturasPage = dynamic(() => Promise.resolve(AsignaturasPageComponent), { ssr: false, /* ... */ });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = asignatura?.id || Date.now().toString();
+    onSave({ ...formData, id });
+  };
+  
+  const updateHoras = (nivel, grado, horas) => {
+      setFormData(prev => ({
+          ...prev,
+          horasPorNivel: {
+              ...prev.horasPorNivel,
+              [nivel]: {
+                  ...prev.horasPorNivel[nivel],
+                  [grado]: parseInt(horas) || 0,
+              }
+          }
+      }))
+  }
 
-export default function AsignaturasPage() {
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-cyan-100 p-6">
-            <div className="max-w-7xl mx-auto">
-                <DynamicAsignaturasPage />
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><Label>Nombre *</Label><Input required value={formData.nombre} onChange={e => setFormData(f => ({...f, nombre: e.target.value}))} /></div>
+            <div><Label>Código *</Label><Input required value={formData.codigo} onChange={e => setFormData(f => ({...f, codigo: e.target.value}))} /></div>
+        </div>
+        <div><Label>Descripción</Label><Input value={formData.descripcion} onChange={e => setFormData(f => ({...f, descripcion: e.target.value}))} /></div>
+        <div>
+            <Label>Color</Label>
+            <div className="flex gap-2 mt-2">
+                {colores.map(c => <button type="button" key={c} onClick={() => setFormData(f => ({...f, color: c}))} className={`w-8 h-8 rounded-full border-2 ${formData.color === c ? 'border-gray-800' : 'border-gray-300'}`} style={{backgroundColor: c}} />)}
             </div>
         </div>
-    );
+        
+      {niveles.map(nivel => (
+          <div key={nivel.id} className="space-y-3">
+              <h4 className="font-medium">{nivel.nombre}</h4>
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                  {nivel.grados.map(grado => (
+                      <div key={grado} className="space-y-1 text-center">
+                          <Label className="text-sm">{grado}</Label>
+                          <Input type="number" min="0" className="text-center" value={formData.horasPorNivel[nivel.id]?.[grado] || 0} onChange={e => updateHoras(nivel.id, grado, e.target.value)} />
+                      </div>
+                  ))}
+              </div>
+          </div>
+      ))}
+
+      <div className="flex justify-end gap-2 pt-4 border-t">
+        <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+        <Button type="submit">{asignatura ? "Actualizar" : "Agregar"}</Button>
+      </div>
+    </form>
+  );
+}
+
+const DynamicAsignaturasPage = dynamic(() => Promise.resolve(AsignaturasPageComponent), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center p-6">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Cargando Módulo de Asignaturas...</p>
+      </div>
+    </div>
+  )
+});
+
+export default function AsignaturasPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-cyan-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        <DynamicAsignaturasPage />
+      </div>
+    </div>
+  );
 }
