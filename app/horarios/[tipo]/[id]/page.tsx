@@ -11,7 +11,7 @@ import Link from "next/link"
 
 export default function HorarioDetallePage() {
   const params = useParams()
-  const { tipo, id } = params
+  const { tipo, id } = params as { tipo: string; id: string }
 
   const [horario, setHorario] = useState<any | null>(null)
   const [entidad, setEntidad] = useState<DocenteDB | CursoDB | null>(null)
@@ -29,7 +29,7 @@ export default function HorarioDetallePage() {
         setHorario(horarioEncontrado)
       }
       const storeName = tipo === "docente" ? "docentes" : "cursos"
-      const entidadData = await database.get<DocenteDB | CursoDB>(storeName, id as string)
+      const entidadData = await database.get<DocenteDB | CursoDB>(storeName, id)
       setEntidad(entidadData)
 
       const [escuelaConfig, horarioConfig] = await Promise.all([
@@ -37,14 +37,21 @@ export default function HorarioDetallePage() {
         database.get<ConfiguracionDB>("configuracion", "horario"),
       ])
       setConfiguracion({ escuela: escuelaConfig?.data, horario: horarioConfig?.data })
-
       setLoading(false)
     }
     if (tipo && id) loadData()
   }, [tipo, id])
 
-  if (loading) return <p>Cargando horario...</p>
-  if (!horario || !entidad) return <p>Horario no encontrado.</p>
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando horario...</p>
+        </div>
+    </div>
+  )
+  
+  if (!horario || !entidad) return <p className="p-6">Horario o entidad no encontrados.</p>
 
   const nombreCompleto = tipo === "docente"
     ? `${(entidad as DocenteDB).nombre} ${(entidad as DocenteDB).apellido}`
@@ -70,7 +77,7 @@ export default function HorarioDetallePage() {
           Imprimir
         </Button>
       </div>
-      <Card className="print-full-width shadow-none border-none">
+      <Card className="print-full-width shadow-none border-none bg-transparent">
         <CardContent className="p-0">
           <HorarioTemplate
             horario={horario}
