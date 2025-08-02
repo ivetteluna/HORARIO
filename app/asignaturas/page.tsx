@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus, Edit, Trash2, BookOpen } from "lucide-react"
 import { useAsignaturas, useDatabase } from "@/hooks/useDatabase"
 import { useNiveles } from "@/hooks/useNiveles"
@@ -114,8 +114,8 @@ function AsignaturasList({ asignaturas, onEdit, onDelete }: any) {
                     <CardContent>
                        <p className="text-sm text-gray-600 h-12">{asignatura.descripcion}</p>
                        <div className="text-xs text-gray-500 mt-4 border-t pt-2">
-                           <p>Horas Primaria: {Object.values(asignatura.horasPorNivel.primario).reduce((a: number, b: number) => a + b, 0)}h</p>
-                           <p>Horas Secundaria: {Object.values(asignatura.horasPorNivel.secundario).reduce((a: number, b: number) => a + b, 0)}h</p>
+                           <p>Horas Primaria: {Object.values(asignatura.horasPorNivel.primario || {}).reduce((a: number, b: number) => a + b, 0)}h</p>
+                           <p>Horas Secundaria: {Object.values(asignatura.horasPorNivel.secundario || {}).reduce((a: number, b: number) => a + b, 0)}h</p>
                        </div>
                     </CardContent>
                 </Card>

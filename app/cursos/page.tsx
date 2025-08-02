@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
@@ -23,11 +22,9 @@ import {
   Trash2,
   Users,
   AlertTriangle,
-  CheckCircle,
 } from "lucide-react"
-import { useCursos, useDocentes, useAsignaturas, useDatabase } from "@/hooks/useDatabase"
+import { useCursos, useDocentes, useDatabase } from "@/hooks/useDatabase"
 import { toast } from "@/hooks/use-toast"
-import Link from "next/link"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 
@@ -35,7 +32,6 @@ function CursosPageComponent() {
   const { isInitialized } = useDatabase()
   const { cursos, loading, saveCurso, deleteCurso } = useCursos()
   const { docentes } = useDocentes()
-  const { asignaturas } = useAsignaturas()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCurso, setEditingCurso] = useState(null)
 
@@ -44,6 +40,7 @@ function CursosPageComponent() {
     grado: "",
     seccion: "",
     estudiantesMatriculados: "",
+    aula: "",
     docenteTitular: "",
   })
 
@@ -60,37 +57,42 @@ function CursosPageComponent() {
 
   const ordenarCursosAutomaticamente = (cursos) => {
     return [...cursos].sort((a, b) => {
-      if (a.nivel !== b.nivel) return a.nivel === "primario" ? -1 : 1
-      const gradoA = parseInt(a.grado?.replace("°", "") || "0")
-      const gradoB = parseInt(b.grado?.replace("°", "") || "0")
-      if (gradoA !== gradoB) return gradoA - gradoB
-      return (a.seccion || "").localeCompare(b.seccion || "")
-    })
-  }
+      if (a.nivel !== b.nivel) return a.nivel === "primario" ? -1 : 1;
+      const gradoA = parseInt(a.grado?.replace("°", "") || "0");
+      const gradoB = parseInt(b.grado?.replace("°", "") || "0");
+      if (gradoA !== gradoB) return gradoA - gradoB;
+      return (a.seccion || "").localeCompare(b.seccion || "");
+    });
+  };
   
   const cursosOrdenados = ordenarCursosAutomaticamente(cursos);
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.nivel || !formData.grado || !formData.seccion) {
-      toast({ title: "Error", description: "Completa los campos obligatorios.", variant: "destructive" })
+    const { nivel, grado, seccion } = formData;
+    if (!nivel || !grado || !seccion) {
+      toast({ title: "Error", description: "Nivel, Grado y Sección son obligatorios.", variant: "destructive" })
       return
     }
-    const nombreDelCurso = `${formData.grado} ${formData.seccion} ${formData.nivel.charAt(0).toUpperCase() + formData.nivel.slice(1)}`
+
+    const nombreDelCurso = `${grado} ${seccion} ${nivel.charAt(0).toUpperCase() + nivel.slice(1)}`
     if (cursos.find((c) => c.nombre === nombreDelCurso && c.id !== editingCurso?.id)) {
       toast({ title: "Error", description: "Ya existe un curso con esa configuración.", variant: "destructive" })
       return
     }
     
+    const titularId = formData.docenteTitular === 'ninguno' ? '' : formData.docenteTitular;
+
     const cursoData = {
+      ...editingCurso,
       id: editingCurso?.id || Date.now().toString(),
       nombre: nombreDelCurso,
       nivel: formData.nivel,
       grado: formData.grado,
       seccion: formData.seccion,
       estudiantesMatriculados: parseInt(formData.estudiantesMatriculados) || 0,
-      docenteTitular: formData.docenteTitular,
-      aula: editingCurso?.aula || "",
+      aula: formData.aula,
+      docenteTitular: titularId,
       asignaturas: editingCurso?.asignaturas || [],
       horasSemanales: editingCurso?.horasSemanales || 40,
     }
@@ -107,6 +109,7 @@ function CursosPageComponent() {
       grado: curso.grado,
       seccion: curso.seccion,
       estudiantesMatriculados: curso.estudiantesMatriculados.toString(),
+      aula: curso.aula || "",
       docenteTitular: curso.docenteTitular || "",
     })
     setIsDialogOpen(true)
@@ -129,7 +132,7 @@ function CursosPageComponent() {
             <p className="text-gray-600">Organización automática por nivel, grado y sección</p>
           </div>
         </div>
-        <Button onClick={() => { setEditingCurso(null); setFormData({ nivel: "", grado: "", seccion: "", estudiantesMatriculados: "", docenteTitular: "" }); setIsDialogOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700">
+        <Button onClick={() => { setEditingCurso(null); setFormData({ nivel: "", grado: "", seccion: "", estudiantesMatriculados: "", aula: "", docenteTitular: "" }); setIsDialogOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700">
           <Plus className="h-4 w-4 mr-2" />
           Nuevo Curso
         </Button>
@@ -142,17 +145,18 @@ function CursosPageComponent() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Nivel *</Label><Select value={formData.nivel} onValueChange={(v) => setFormData(f => ({...f, nivel: v}))}><SelectTrigger><SelectValue placeholder="Nivel"/></SelectTrigger><SelectContent><SelectItem value="primario">Primario</SelectItem><SelectItem value="secundario">Secundario</SelectItem></SelectContent></Select></div>
-              <div><Label>Grado *</Label><Select value={formData.grado} onValueChange={(v) => setFormData(f => ({...f, grado: v}))}><SelectTrigger><SelectValue placeholder="Grado"/></SelectTrigger><SelectContent>{["1°","2°","3°","4°","5°","6°"].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select></div>
-              <div><Label>Sección *</Label><Select value={formData.seccion} onValueChange={(v) => setFormData(f => ({...f, seccion: v}))}><SelectTrigger><SelectValue placeholder="Sección"/></SelectTrigger><SelectContent>{["A","B","C","D","E"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+              <div><Label>Nivel *</Label><Select required value={formData.nivel} onValueChange={(v) => setFormData(f => ({...f, nivel: v}))}><SelectTrigger><SelectValue placeholder="Nivel"/></SelectTrigger><SelectContent><SelectItem value="primario">Primario</SelectItem><SelectItem value="secundario">Secundario</SelectItem></SelectContent></Select></div>
+              <div><Label>Grado *</Label><Select required value={formData.grado} onValueChange={(v) => setFormData(f => ({...f, grado: v}))}><SelectTrigger><SelectValue placeholder="Grado"/></SelectTrigger><SelectContent>{["1°","2°","3°","4°","5°","6°"].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select></div>
+              <div><Label>Sección *</Label><Select required value={formData.seccion} onValueChange={(v) => setFormData(f => ({...f, seccion: v}))}><SelectTrigger><SelectValue placeholder="Sección"/></SelectTrigger><SelectContent>{["A","B","C","D","E"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
               <div><Label>Estudiantes</Label><Input type="number" value={formData.estudiantesMatriculados} onChange={e => setFormData(f => ({...f, estudiantesMatriculados: e.target.value}))}/></div>
             </div>
+             <div><Label>Aula</Label><Input value={formData.aula} onChange={e => setFormData(f => ({...f, aula: e.target.value}))}/></div>
             <div>
               <Label>Docente Titular (Encargado)</Label>
               <Select value={formData.docenteTitular} onValueChange={(v) => setFormData(f => ({...f, docenteTitular: v}))}>
                 <SelectTrigger><SelectValue placeholder="Asignar un docente titular"/></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Ninguno</SelectItem>
+                  <SelectItem value="ninguno">Ninguno</SelectItem>
                   {docentes.filter(d => d.tipo === 'titular').map(d => <SelectItem key={d.id} value={d.id}>{d.nombre} {d.apellido}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -212,7 +216,17 @@ function CursosPageComponent() {
   );
 }
 
-const DynamicCursosPage = dynamic(() => Promise.resolve(CursosPageComponent), { ssr: false });
+const DynamicCursosPage = dynamic(() => Promise.resolve(CursosPageComponent), {
+    ssr: false,
+    loading: () => (
+        <div className="flex h-screen items-center justify-center">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Cargando Módulo de Cursos...</p>
+            </div>
+        </div>
+    )
+});
 
 export default function CursosPage() {
     return (
