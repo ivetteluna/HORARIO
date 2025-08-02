@@ -5,170 +5,70 @@ import { database, type DocenteDB, type AsignaturaDB, type CursoDB, type Configu
 
 export function useDatabase() {
   const [isInitialized, setIsInitialized] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
   useEffect(() => {
-    const initDB = async () => {
-      try {
-        await database.init()
-        setIsInitialized(true)
-        setError(null)
-      } catch (error) {
-        console.error("Error initializing database:", error)
-        setError(error instanceof Error ? error.message : "Unknown error")
-      }
-    }
-
-    initDB()
+    database.init().then(() => setIsInitialized(true))
   }, [])
-
-  return { isInitialized, error }
+  return { isInitialized }
 }
 
-export function useDocentes() {
-  const [docentes, setDocentes] = useState<DocenteDB[]>([])
-  const [loading, setLoading] = useState(true)
+function useDataStore<T>(storeName: string) {
   const { isInitialized } = useDatabase()
+  const [data, setData] = useState<T[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const loadDocentes = useCallback(async () => {
+  const loadData = useCallback(async () => {
     if (!isInitialized) return
     setLoading(true)
     try {
-      const data = await database.getAll<DocenteDB>("docentes")
-      setDocentes(data || [])
+      const result = await database.getAll<T>(storeName)
+      setData(result)
     } catch (error) {
-      console.error("Error loading docentes:", error)
+      console.error(`Error loading ${storeName}:`, error)
     } finally {
       setLoading(false)
     }
-  }, [isInitialized])
+  }, [isInitialized, storeName])
 
-  const saveDocente = useCallback(async (docente: DocenteDB) => {
-    await database.save("docentes", docente)
-    await loadDocentes()
-  }, [loadDocentes])
+  const saveData = useCallback(async (item: T) => {
+    await database.save(storeName, item)
+    await loadData()
+  }, [storeName, loadData])
 
-  const deleteDocente = useCallback(async (id: string) => {
-    await database.delete("docentes", id)
-    await loadDocentes()
-  }, [loadDocentes])
+  const deleteData = useCallback(async (id: string) => {
+    await database.delete(storeName, id)
+    await loadData()
+  }, [storeName, loadData])
 
   useEffect(() => {
-    if (isInitialized) {
-      loadDocentes()
-    }
-  }, [isInitialized, loadDocentes])
+    loadData()
+  }, [loadData])
 
-  return { docentes, loading, saveDocente, deleteDocente, loadDocentes }
+  return { data, loading, saveData, deleteData, loadData }
+}
+
+export function useDocentes() {
+  const { data, loading, saveData, deleteData, loadData } = useDataStore<DocenteDB>("docentes")
+  return { docentes: data, loading, saveDocente: saveData, deleteDocente: deleteData, loadDocentes: loadData }
 }
 
 export function useAsignaturas() {
-    const [asignaturas, setAsignaturas] = useState<AsignaturaDB[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { isInitialized } = useDatabase();
-
-    const loadAsignaturas = useCallback(async () => {
-        if (!isInitialized) return;
-        setLoading(true);
-        try {
-            const data = await database.getAll<AsignaturaDB>("asignaturas");
-            setAsignaturas(data || []);
-        } catch (error) {
-            console.error("Error loading asignaturas:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, [isInitialized]);
-
-    const saveAsignatura = useCallback(async (asignatura: AsignaturaDB) => {
-        await database.save("asignaturas", asignatura);
-        await loadAsignaturas();
-    }, [loadAsignaturas]);
-
-    const deleteAsignatura = useCallback(async (id: string) => {
-        await database.delete("asignaturas", id);
-        await loadAsignaturas();
-    }, [loadAsignaturas]);
-
-    useEffect(() => {
-        if (isInitialized) {
-            loadAsignaturas();
-        }
-    }, [isInitialized, loadAsignaturas]);
-
-    return { asignaturas, loading, saveAsignatura, deleteAsignatura, loadAsignaturas };
+  const { data, loading, saveData, deleteData, loadData } = useDataStore<AsignaturaDB>("asignaturas")
+  return { asignaturas: data, loading, saveAsignatura: saveData, deleteAsignatura: deleteData, loadAsignaturas: loadData }
 }
 
 export function useCursos() {
-    const [cursos, setCursos] = useState<CursoDB[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { isInitialized } = useDatabase();
-
-    const loadCursos = useCallback(async () => {
-        if (!isInitialized) return;
-        setLoading(true);
-        try {
-            const data = await database.getAll<CursoDB>("cursos");
-            setCursos(data || []);
-        } catch (error) {
-            console.error("Error loading cursos:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, [isInitialized]);
-
-    const saveCurso = useCallback(async (curso: CursoDB) => {
-        await database.save("cursos", curso);
-        await loadCursos();
-    }, [loadCursos]);
-
-    const deleteCurso = useCallback(async (id: string) => {
-        await database.delete("cursos", id);
-        await loadCursos();
-    }, [loadCursos]);
-
-    useEffect(() => {
-        if (isInitialized) {
-            loadCursos();
-        }
-    }, [isInitialized, loadCursos]);
-
-    return { cursos, loading, saveCurso, deleteCurso, loadCursos };
+  const { data, loading, saveData, deleteData, loadData } = useDataStore<CursoDB>("cursos")
+  return { cursos: data, loading, saveCurso: saveData, deleteCurso: deleteData, loadCursos: loadData }
 }
 
 export function useConfiguracion() {
-    const [configuracion, setConfiguracion] = useState<ConfiguracionDB[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { isInitialized } = useDatabase();
+  const { data, loading, saveData, loadData } = useDataStore<ConfiguracionDB>("configuracion")
+  const { isInitialized } = useDatabase()
 
-    const loadConfiguracion = useCallback(async () => {
-        if (!isInitialized) return;
-        setLoading(true);
-        try {
-            const data = await database.getAll<ConfiguracionDB>("configuracion");
-            setConfiguracion(data || []);
-        } catch (error) {
-            console.error("Error loading configuracion:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, [isInitialized]);
+  const getConfiguracion = useCallback(async (tipo: "horario" | "escuela") => {
+    if (!isInitialized) return undefined;
+    return await database.get<ConfiguracionDB>("configuracion", tipo);
+  }, [isInitialized]);
 
-    const saveConfiguracion = useCallback(async (config: ConfiguracionDB) => {
-        await database.save("configuracion", config);
-        await loadConfiguracion();
-    }, [loadConfiguracion]);
-    
-    const getConfiguracion = useCallback(async (tipo: "horario" | "escuela") => {
-        if (!isInitialized) throw new Error("Database not initialized");
-        return await database.get<ConfiguracionDB>("configuracion", tipo);
-    }, [isInitialized]);
-
-    useEffect(() => {
-        if (isInitialized) {
-            loadConfiguracion();
-        }
-    }, [isInitialized, loadConfiguracion]);
-
-    return { configuracion, loading, saveConfiguracion, getConfiguracion, loadConfiguracion };
+  return { configuracion: data, loading, saveConfiguracion: saveData, getConfiguracion, loadConfiguracion: loadData }
 }

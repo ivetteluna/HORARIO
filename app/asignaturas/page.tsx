@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Edit, Trash2, BookOpen, Palette, Search, GraduationCap } from "lucide-react"
 import { useAsignaturas, useDatabase } from "@/hooks/useDatabase"
-import { useNiveles } from "@/hooks/useNiveles"
+import { useNiveles } from "@/hooks/useNiveles" // <-- CORRECCIÓN IMPORTANTE
 import type { AsignaturaDB } from "@/lib/database"
 import { toast } from "@/hooks/use-toast"
 
-// ... (El resto del archivo se mantiene igual)
+// ... (El resto del código del archivo se mantiene igual)
