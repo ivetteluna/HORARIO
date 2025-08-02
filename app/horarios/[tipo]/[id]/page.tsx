@@ -5,17 +5,17 @@ import { useParams } from "next/navigation"
 import { database, type DocenteDB, type CursoDB, type ConfiguracionDB } from "@/lib/database"
 import { HorarioTemplate } from "@/components/horario-template"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Download, Printer } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { ArrowLeft, Printer } from "lucide-react"
 import Link from "next/link"
 
-// ... (Interfaces se mantienen igual)
+// ... (Las interfaces se mantienen igual)
 
 export default function HorarioDetallePage() {
   const params = useParams()
   const { tipo, id } = params
 
-  const [horario, setHorario] = useState<HorarioGenerado | null>(null)
+  const [horario, setHorario] = useState<any | null>(null)
   const [entidad, setEntidad] = useState<DocenteDB | CursoDB | null>(null)
   const [configuracion, setConfiguracion] = useState<{
     escuela?: any
@@ -28,8 +28,6 @@ export default function HorarioDetallePage() {
     const loadData = async () => {
       try {
         setLoading(true)
-        setError(null)
-
         await database.init()
 
         const horariosGuardados = localStorage.getItem("horariosGenerados")
@@ -82,17 +80,7 @@ export default function HorarioDetallePage() {
     window.print()
   }
 
-  if (loading) {
-    // ... loading state
-  }
-
-  if (error) {
-    // ... error state
-  }
-
-  if (!horario || !entidad) {
-    // ... no data state
-  }
+  // ... (Los estados de carga, error y si no hay horario se mantienen igual)
 
   const nombreCompleto =
     tipo === "docente"
@@ -114,23 +102,21 @@ export default function HorarioDetallePage() {
             <p className="text-gray-600">{nombreCompleto}</p>
           </div>
         </div>
-
-        <div className="flex gap-2">
-          <Button onClick={handlePrint} variant="outline">
-            <Printer className="w-4 h-4 mr-2" />
-            Imprimir
-          </Button>
-        </div>
+        <Button onClick={handlePrint} variant="outline">
+          <Printer className="w-4 h-4 mr-2" />
+          Imprimir
+        </Button>
       </div>
-
-      <Card className="print-full-width">
+      <Card className="print-full-width shadow-lg">
         <CardContent className="p-2 md:p-6">
-          <HorarioTemplate
-            horario={horario}
-            entidad={entidad}
-            tipo={tipo as "docente" | "curso"}
-            configuracion={configuracion}
-          />
+          {horario && entidad && (
+            <HorarioTemplate
+              horario={horario}
+              entidad={entidad}
+              tipo={tipo as "docente" | "curso"}
+              configuracion={configuracion}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
