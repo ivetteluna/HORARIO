@@ -58,8 +58,8 @@ export default function HorarioDetallePage() {
     : (entidad as CursoDB).nombre
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6 flex items-center justify-between no-print">
+    <div className="container mx-auto">
+      <div className="my-6 flex items-center justify-between no-print">
         <div className="flex items-center gap-4">
           <Link href="/horarios">
             <Button variant="outline" size="sm">
@@ -77,16 +77,16 @@ export default function HorarioDetallePage() {
           Imprimir
         </Button>
       </div>
-      <Card className="print-full-width shadow-none border-none bg-transparent">
-        <CardContent className="p-0">
+      
+      {/* El Card ahora es un contenedor simple que se ajustará en la impresión */}
+      <div className="print-container">
           <HorarioTemplate
             horario={horario}
             entidad={entidad}
             tipo={tipo as "docente" | "curso"}
             configuracion={configuracion}
           />
-        </CardContent>
-      </Card>
+      </div>
     </div>
   )
 }
