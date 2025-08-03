@@ -30,14 +30,16 @@ function useDataStore<T extends { id: string }>(storeName: string) {
   }, [isInitialized, storeName]);
 
   const saveData = useCallback(async (item: T) => {
+    if (!isInitialized) return;
     await database.save(storeName, item);
     await loadData();
-  }, [storeName, loadData]);
+  }, [isInitialized, storeName, loadData]);
 
   const deleteData = useCallback(async (id: string) => {
+    if (!isInitialized) return;
     await database.delete(storeName, id);
     await loadData();
-  }, [storeName, loadData]);
+  }, [isInitialized, storeName, loadData]);
 
   useEffect(() => {
     if (isInitialized) {
