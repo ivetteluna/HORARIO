@@ -55,7 +55,8 @@ export default function GenerarPage() {
     // Generar horarios de docentes
     for (const [index, docente] of docentes.entries()) {
         setMensajeProgreso(`Creando horario para ${docente.nombre}...`);
-        setProgreso(index / (docentes.length + cursos.length) * 100);
+        setProgreso(Math.round((index / (docentes.length + cursos.length)) * 100));
+        await new Promise(resolve => setTimeout(resolve, 50)); // Simula trabajo
 
         const horarioDocente = {
             id: `docente-${docente.id}`, tipo: "docente", entidadId: docente.id,
@@ -77,7 +78,8 @@ export default function GenerarPage() {
     // Generar horarios de cursos
     for (const [index, curso] of cursos.entries()) {
         setMensajeProgreso(`Creando horario para ${curso.nombre}...`);
-        setProgreso((docentes.length + index) / (docentes.length + cursos.length) * 100);
+        setProgreso(Math.round(((docentes.length + index) / (docentes.length + cursos.length)) * 100));
+        await new Promise(resolve => setTimeout(resolve, 50)); // Simula trabajo
 
         const horarioCurso = {
             id: `curso-${curso.id}`, tipo: "curso", entidadId: curso.id,
@@ -105,7 +107,6 @@ export default function GenerarPage() {
                                     asignatura: asignatura.nombre,
                                     docenteId: docente.id,
                                     docenteNombre: `${docente.nombre} ${docente.apellido}`,
-                                    horasRequeridas: horas
                                 });
                             }
                         }
@@ -114,7 +115,6 @@ export default function GenerarPage() {
             });
         });
 
-        // Barajar para aleatoriedad
         asignacionesCurso.sort(() => Math.random() - 0.5);
 
         dias.forEach(dia => {
@@ -123,15 +123,13 @@ export default function GenerarPage() {
                 if (asignacionesCurso.length === 0) break;
                 
                 const horarioCurso = horariosCursos.find(h => h.entidadId === curso.id);
-                if (horarioCurso.horario[dia][periodo.nombre].asignatura) continue; // Ya ocupado
+                if (horarioCurso.horario[dia][periodo.nombre].asignatura) continue;
 
                 const asignacion = asignacionesCurso[0];
                 const horarioDocente = horariosDocentes.find(h => h.entidadId === asignacion.docenteId);
 
-                if (horarioDocente.horario[dia][periodo.nombre].asignatura === "H. P") {
-                    
+                if (horarioDocente && horarioDocente.horario[dia][periodo.nombre].asignatura === "H. P") {
                     const asignacionActual = asignacionesCurso.shift();
-                    
                     horarioCurso.horario[dia][periodo.nombre] = {
                         asignatura: asignacionActual.asignatura,
                         docente: asignacionActual.docenteNombre
@@ -148,9 +146,41 @@ export default function GenerarPage() {
     setMensajeProgreso("¡Horarios generados exitosamente!");
     setProgreso(100);
     localStorage.setItem("horariosGenerados", JSON.stringify([...horariosDocentes, ...horariosCursos]));
-    toast({ title: "Éxito!", description: `Se generaron ${horariosDocentes.length + horariosCursos.length} horarios.` });
-    setGenerando(false);
+    toast({ title: "¡Éxito!", description: `Se generaron ${horariosDocentes.length + horariosCursos.length} horarios.` });
+    
+    setTimeout(() => {
+        setGenerando(false);
+    }, 2000);
   }
 
-  // ... (El resto del JSX se mantiene igual)
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Generar Horarios</h1>
+          <p className="text-gray-600">Genera horarios automáticamente para docentes y cursos</p>
+        </div>
+      </div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Generación de Horarios</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {generando && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-center">{mensajeProgreso}</p>
+              <Progress value={progreso} className="w-full" />
+            </div>
+          )}
+          <div className="flex gap-4">
+            <Button onClick={generarHorarios} disabled={generando}>
+              <Play className="w-4 h-4 mr-2" />
+              {generando ? "Generando..." : "Generar Horarios"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }

@@ -36,48 +36,47 @@
   }
 }
 
-/* --- ESTILOS DE IMPRESIÓN MEJORADOS --- */
+/* --- ESTILOS DE IMPRESIÓN --- */
 @media print {
   body, html {
-    background-color: white !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    width: 100%;
-    height: 100%;
-    margin: 0;
+    background: white !important;
     padding: 0;
+    margin: 0;
   }
 
-  /* Oculta todo por defecto en la impresión */
-  body > div > *:not(.print-this) {
-    display: none !important;
+  /* Oculta todo por defecto */
+  body > div > * {
+    display: none;
   }
   
-  /* Muestra solo el contenedor principal y su contenido */
-  main.print-this, main.print-this * {
-    display: block !important;
-    visibility: visible !important;
+  /* Muestra solo el layout principal */
+  body > div > main {
+    display: block;
   }
 
-  /* Oculta elementos no deseados dentro del área de impresión */
+  /* Dentro del layout, oculta todo lo que no sea para imprimir */
+  main > *:not(.print-this) {
+    display: none;
+  }
+
+  /* Muestra el contenedor del horario y su contenido */
+  main > .print-this, main > .print-this * {
+    display: block;
+    visibility: visible;
+  }
+
+  /* Oculta los botones dentro del área de impresión */
   .no-print {
     display: none !important;
   }
 
   .print-container {
-    padding: 1rem;
+    padding: 0;
     margin: 0;
   }
-  
-  /* Asegura que el contenedor del horario y el layout usen todo el espacio */
-  #root, main {
-    padding: 0 !important;
-    margin: 0 !important;
-  }
 
-  /* Configuración de la página */
   @page {
-    size: letter landscape; /* Carta horizontal */
+    size: letter landscape;
     margin: 0.5in;
   }
 }

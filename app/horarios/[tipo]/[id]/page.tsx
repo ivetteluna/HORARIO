@@ -57,8 +57,8 @@ export default function HorarioDetallePage() {
     : (entidad as CursoDB).nombre;
 
   return (
-    <div className="p-0 md:p-6 print-this">
-      <div className="mb-6 flex items-center justify-between no-print">
+    <div className="print-this">
+      <div className="mb-6 flex items-center justify-between no-print p-6">
         <div className="flex items-center gap-4">
           <Link href="/horarios">
             <Button variant="outline" size="sm">
@@ -77,7 +77,7 @@ export default function HorarioDetallePage() {
         </Button>
       </div>
       
-      <div className="print-container bg-white">
+      <div className="print-container bg-white p-6">
           <HorarioTemplate
             horario={horario}
             entidad={entidad}
