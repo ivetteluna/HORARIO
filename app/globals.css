@@ -40,43 +40,38 @@
 @media print {
   body, html {
     background: white !important;
-    padding: 0;
     margin: 0;
+    padding: 0;
   }
 
-  /* Oculta todo por defecto */
-  body > div > * {
-    display: none;
-  }
-  
-  /* Muestra solo el layout principal */
-  body > div > main {
-    display: block;
-  }
-
-  /* Dentro del layout, oculta todo lo que no sea para imprimir */
-  main > *:not(.print-this) {
-    display: none;
-  }
-
-  /* Muestra el contenedor del horario y su contenido */
-  main > .print-this, main > .print-this * {
-    display: block;
-    visibility: visible;
-  }
-
-  /* Oculta los botones dentro del área de impresión */
+  /* Oculta todo lo que no queremos imprimir */
   .no-print {
     display: none !important;
   }
 
-  .print-container {
-    padding: 0;
-    margin: 0;
+  /* El contenedor principal de la app se esconde */
+  body > div.flex {
+      display: none;
+  }
+  
+  /* Se crea una excepción para el contenedor del horario si está dentro del main */
+  body > div > main .print-container {
+      display: block !important;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: auto;
   }
 
+  /* Elimina el scroll del main en la impresión */
+  main {
+      overflow: hidden !important;
+  }
+
+  /* Configuración de la página */
   @page {
-    size: letter landscape;
+    size: letter landscape; /* Carta horizontal */
     margin: 0.5in;
   }
 }
