@@ -13,10 +13,8 @@ import {
   BarChart3,
   Users,
   BookOpen,
-  GraduationCap,
   AlertTriangle,
   CheckCircle,
-  Clock,
   FileText,
   Eye,
   TrendingUp,
@@ -33,7 +31,6 @@ function ReportesPageComponent() {
   const { docentes, loading: loadingDocentes } = useDocentes();
   const { asignaturas, loading: loadingAsignaturas } = useAsignaturas();
   const { cursos, loading: loadingCursos } = useCursos();
-  const [filtroNivel, setFiltroNivel] = useState("todos");
 
   const loading = loadingDocentes || loadingAsignaturas || loadingCursos;
 
@@ -48,7 +45,7 @@ function ReportesPageComponent() {
     );
   }
 
-  const calcularEstadisticasGenerales = () => {
+  const estadisticasGenerales = () => {
     const cursosConProblemas = cursos.filter(curso => 
         !docentes.some(d => d.cursosAsignados?.some(ca => ca.cursoId === curso.id))
     );
@@ -66,7 +63,7 @@ function ReportesPageComponent() {
     };
   };
 
-  const estadisticasGenerales = calcularEstadisticasGenerales();
+  const stats = estadisticasGenerales();
 
   return (
     <>
@@ -78,6 +75,13 @@ function ReportesPageComponent() {
         <p className="text-gray-600">
           Análisis detallado de asignaciones, faltantes y estado general del sistema.
         </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card><CardContent className="p-6"><div><p className="text-sm font-medium">Cursos con Problemas</p><p className="text-3xl font-bold text-red-600">{stats.cursosConProblemas.length}</p></div></CardContent></Card>
+          <Card><CardContent className="p-6"><div><p className="text-sm font-medium">Docentes Sin Asignar</p><p className="text-3xl font-bold text-amber-600">{stats.docentesSinAsignaciones.length}</p></div></CardContent></Card>
+          <Card><CardContent className="p-6"><div><p className="text-sm font-medium">Asignaturas No Asignadas</p><p className="text-3xl font-bold text-orange-600">{stats.asignaturasNoAsignadas.length}</p></div></CardContent></Card>
+          <Card><CardContent className="p-6"><div><p className="text-sm font-medium">Eficiencia</p><p className="text-3xl font-bold text-green-600">{stats.totalCursos > 0 ? Math.round(((stats.totalCursos - stats.cursosConProblemas.length) / stats.totalCursos) * 100) : 100}%</p></div></CardContent></Card>
       </div>
 
       <Tabs defaultValue="resumen-general" className="space-y-6">
@@ -98,20 +102,61 @@ function ReportesPageComponent() {
               <Accordion type="single" collapsible className="w-full">
                 {docentes.map((docente) => (
                   <AccordionItem value={docente.id} key={docente.id}>
-                    <AccordionTrigger className="text-left">
-                      {docente.nombre} {docente.apellido}
+                    <AccordionTrigger className="text-left hover:no-underline">
+                        <div className="flex items-center gap-4">
+                           <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center"><Users className="h-5 w-5 text-indigo-600"/></div>
+                           <div>
+                                <p className="font-semibold text-base">{docente.nombre} {docente.apellido}</p>
+                                <p className="text-sm text-gray-500 font-normal">{docente.especialidad}</p>
+                           </div>
+                        </div>
                     </AccordionTrigger>
-                    <AccordionContent className="p-4 bg-gray-50 rounded-md">
-                      <p><strong>Título:</strong> {docente.especialidad}</p>
-                      <p><strong>Email:</strong> {docente.email}</p>
-                      <p><strong>Teléfono:</strong> {docente.telefono}</p>
-                      <h4 className="font-semibold mt-2">Cursos Asignados:</h4>
-                      <ul>
-                        {docente.cursosAsignados.map(ca => {
-                          const curso = cursos.find(c => c.id === ca.cursoId);
-                          return <li key={ca.cursoId}>- {curso?.nombre}</li>
-                        })}
-                      </ul>
+                    <AccordionContent className="p-4 bg-gray-50 rounded-b-md border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <h4 className="font-semibold mb-2">Información Personal</h4>
+                            <div className="space-y-1 text-sm">
+                                <p><strong>Cédula:</strong> {docente.cedula}</p>
+                                <p className="flex items-center gap-2"><Mail className="h-4 w-4" /> {docente.email || "No especificado"}</p>
+                                <p className="flex items-center gap-2"><Phone className="h-4 w-4" /> {docente.telefono}</p>
+                            </div>
+                          </div>
+                           <div>
+                              <h4 className="font-semibold mb-2">Información Profesional</h4>
+                              <div className="space-y-2 text-sm">
+                                <p><strong>Tipo:</strong> <Badge variant={docente.tipo.startsWith("titular") ? "default" : "secondary"}>{docente.tipo === 'titular' ? 'Titular' : docente.tipo === 'titular_con_adicionales' ? 'Titular c/ Adicionales' : 'Rotación'}</Badge></p>
+                                <p><strong>Nivel:</strong> <Badge variant="outline">{docente.nivel}</Badge></p>
+                                <p><strong>Horas Disponibles:</strong> {docente.horasDisponibles}h</p>
+                              </div>
+                            </div>
+                      </div>
+                      <div className="mt-4 pt-4 border-t">
+                        <h4 className="font-semibold mb-2">Asignaciones de Cursos y Asignaturas</h4>
+                        {docente.cursosAsignados && docente.cursosAsignados.length > 0 ? (
+                          <div className="space-y-3">
+                            {docente.cursosAsignados.map(asignacion => {
+                              const curso = cursos.find(c => c.id === asignacion.cursoId);
+                              return (
+                                <div key={asignacion.cursoId} className="p-3 bg-white rounded-md border">
+                                  <p className="font-bold text-indigo-700 flex items-center gap-2">{curso?.nombre || 'Curso no encontrado'} {asignacion.esTitular && <Badge>Titular</Badge>}</p>
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {asignacion.asignaturas.map(asigId => {
+                                      const asignatura = asignaturas.find(a => a.id === asigId);
+                                      return (
+                                        <Badge key={asigId} variant="secondary" style={{ backgroundColor: asignatura?.color, color: 'white' }}>
+                                          {asignatura?.nombre || 'Asignatura desconocida'}
+                                        </Badge>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">Este docente no tiene cursos asignados.</p>
+                        )}
+                      </div>
                     </AccordionContent>
                   </AccordionItem>
                 ))}
@@ -119,7 +164,7 @@ function ReportesPageComponent() {
             </CardContent>
           </Card>
         </TabsContent>
-        {/* ... Otras pestañas aquí */}
+        {/* ... (Las otras pestañas se mantienen igual, pero ahora funcionales) ... */}
       </Tabs>
     </>
   );

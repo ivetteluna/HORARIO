@@ -5,7 +5,6 @@ import { useParams } from "next/navigation"
 import { database, type DocenteDB, type CursoDB, type ConfiguracionDB } from "@/lib/database"
 import { HorarioTemplate } from "@/components/horario-template"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft, Printer } from "lucide-react"
 import Link from "next/link"
 
@@ -58,8 +57,8 @@ export default function HorarioDetallePage() {
     : (entidad as CursoDB).nombre
 
   return (
-    <div className="container mx-auto">
-      <div className="my-6 flex items-center justify-between no-print">
+    <div className="p-6">
+      <div className="mb-6 flex items-center justify-between no-print">
         <div className="flex items-center gap-4">
           <Link href="/horarios">
             <Button variant="outline" size="sm">
@@ -72,14 +71,13 @@ export default function HorarioDetallePage() {
             <p className="text-gray-600">{nombreCompleto}</p>
           </div>
         </div>
-        <Button onClick={() => window.print()} variant="outline">
+        <Button onClick={() => window.print()} className="bg-indigo-600 hover:bg-indigo-700">
           <Printer className="w-4 h-4 mr-2" />
           Imprimir
         </Button>
       </div>
       
-      {/* El Card ahora es un contenedor simple que se ajustará en la impresión */}
-      <div className="print-container">
+      <div className="print-container bg-white">
           <HorarioTemplate
             horario={horario}
             entidad={entidad}

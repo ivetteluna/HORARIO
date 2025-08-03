@@ -25,10 +25,6 @@
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
   }
-
-  .dark {
-    /* ... dark mode variables ... */
-  }
 }
 
 @layer base {
@@ -42,23 +38,41 @@
 
 /* --- ESTILOS DE IMPRESIÓN MEJORADOS --- */
 @media print {
-  body {
+  body, html {
     background-color: white !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
   }
 
-  /* Oculta todo lo que no queremos imprimir */
-  .no-print, header, nav, aside, footer, .sidebar {
+  /* Oculta todo por defecto en la impresión */
+  body > div > *:not(.print-this) {
+    display: none !important;
+  }
+  
+  /* Muestra solo el contenedor principal y su contenido */
+  main.print-this, main.print-this * {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* Oculta elementos no deseados dentro del área de impresión */
+  .no-print {
     display: none !important;
   }
 
-  /* Asegura que el contenedor del horario use todo el espacio */
   .print-container {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+    padding: 1rem;
+    margin: 0;
+  }
+  
+  /* Asegura que el contenedor del horario y el layout usen todo el espacio */
+  #root, main {
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   /* Configuración de la página */
