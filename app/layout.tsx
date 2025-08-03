@@ -20,10 +20,10 @@ export default function RootLayout({
     return (
       <html lang="es">
         <body className={inter.className}>
-          <div className="flex h-screen items-center justify-center">
+          <div className="flex h-screen items-center justify-center bg-gray-100">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Inicializando base de datos...</p>
+              <p className="text-gray-600">Inicializando sistema...</p>
             </div>
           </div>
         </body>
@@ -37,7 +37,9 @@ export default function RootLayout({
         <div className="flex h-screen bg-gray-100">
           <Sidebar />
           <main className="flex-1 overflow-y-auto">
-            {children}
+            <div className="p-6">
+              {children}
+            </div>
             <footer className="bg-white border-t border-gray-200 py-4 px-6 mt-auto">
               <div className="text-center text-sm text-gray-600">
                 <p className="font-medium">Aplicación creada por Luis Baudilio Luna</p>
