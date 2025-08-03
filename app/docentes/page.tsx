@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Progress } from "@/components/ui/progress"
 import {
   Plus,
   Edit,
@@ -16,37 +16,14 @@ import {
   Users,
   Mail,
   Phone,
-  BookOpen,
-  GraduationCap,
   X,
-  AlertCircle,
   Eye,
-  EyeOff,
-  CheckCircle,
-  ArrowUpDown
+  EyeOff
 } from "lucide-react"
 import { useDocentes, useAsignaturas, useCursos, useDatabase, useConfiguracion } from "@/hooks/useDatabase"
-import { useNiveles } from "@/hooks/useNiveles"
 import type { DocenteDB } from "@/lib/database"
 import { toast } from "@/hooks/use-toast"
 import { useState } from "react"
-
-const especialidadesComunes = [
-  "Educación Básica", "Matemáticas", "Lengua Española", "Ciencias Naturales",
-  "Ciencias Sociales", "Educación Física", "Educación Artística", "Inglés",
-  "Francés", "Informática", "Orientación y Psicología", "Biblioteca",
-];
-
-const ordenarCursosAutomaticamente = (cursos: any[]) => {
-  if (!cursos) return [];
-  return [...cursos].sort((a, b) => {
-    if (a.nivel !== b.nivel) return a.nivel === "primario" ? -1 : 1;
-    const gradoA = parseInt(a.grado?.replace("°", "") || "0");
-    const gradoB = parseInt(b.grado?.replace("°", "") || "0");
-    if (gradoA !== gradoB) return gradoA - gradoB;
-    return (a.seccion || "").localeCompare(b.seccion || "");
-  });
-};
 
 function DocentesPageComponent() {
   const { isInitialized } = useDatabase();
@@ -135,71 +112,93 @@ function DocentesList({ docentes, cursos, asignaturas, onEdit, onDelete }: any) 
         newExpanded.has(docenteId) ? newExpanded.delete(docenteId) : newExpanded.add(docenteId);
         setExpandedDocentes(newExpanded);
     };
+
+    const calcularHorasAsignadas = (docente) => {
+        return docente.cursosAsignados?.reduce((total, ca) => {
+            const curso = cursos.find(c => c.id === ca.cursoId);
+            if (!curso) return total;
+            const horasAsignaturas = ca.asignaturas.reduce((subtotal, asigId) => {
+                const asig = asignaturas.find(a => a.id === asigId);
+                if (asig) {
+                    return subtotal + (asig.horasPorNivel[curso.nivel]?.[curso.grado] || 0);
+                }
+                return subtotal;
+            }, 0);
+            return total + horasAsignaturas;
+        }, 0) || 0;
+    };
     
     if (docentes.length === 0) {
-        return <div className="text-center text-gray-500 py-10">No hay docentes registrados. Haz clic en "Agregar Docente" para empezar.</div>
+        return <div className="text-center text-gray-500 py-10">No hay docentes registrados.</div>
     }
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {docentes.map((docente) => (
-                <Card key={docente.id} className="flex flex-col">
-                    <CardHeader>
-                        <CardTitle className="flex justify-between items-start">
-                           <span className="text-lg">{docente.nombre} {docente.apellido}</span>
-                           <div className="flex-shrink-0">
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(docente)}><Edit className="h-4 w-4"/></Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(docente.id)}><Trash2 className="h-4 w-4"/></Button>
-                            </div>
-                        </CardTitle>
-                        <CardDescription>{docente.especialidad}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4 flex-grow">
-                        <div className="space-y-2 text-sm">
-                          <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-gray-500"/>{docente.email || 'No disponible'}</p>
-                          <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-gray-500"/>{docente.telefono || 'No disponible'}</p>
-                        </div>
-                        <div className="flex gap-2">
-                           <Badge variant={docente.tipo.startsWith("titular") ? "default" : "secondary"}>
-                                {docente.tipo === 'titular' ? 'Titular' : docente.tipo === 'titular_con_adicionales' ? 'Titular c/ Adicionales' : 'Rotación'}
-                           </Badge>
-                           <Badge variant="outline">{docente.nivel}</Badge>
-                        </div>
-                        {docente.cursosAsignados && docente.cursosAsignados.length > 0 ? (
-                            <div className="pt-2 border-t">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="font-semibold text-sm">Asignaciones ({docente.cursosAsignados.length})</h4>
-                                    <Button variant="ghost" size="sm" onClick={() => toggleExpanded(docente.id)}>
-                                        {expandedDocentes.has(docente.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                    </Button>
+            {docentes.map((docente) => {
+                const horasAsignadas = calcularHorasAsignadas(docente);
+                const cargaPorcentaje = (horasAsignadas / docente.horasDisponibles) * 100;
+                return (
+                    <Card key={docente.id} className="flex flex-col">
+                        <CardHeader>
+                            <CardTitle className="flex justify-between items-start">
+                               <span className="text-lg">{docente.nombre} {docente.apellido}</span>
+                               <div className="flex-shrink-0">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(docente)}><Edit className="h-4 w-4"/></Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(docente.id)}><Trash2 className="h-4 w-4"/></Button>
                                 </div>
-                                {expandedDocentes.has(docente.id) && (
-                                    <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
-                                        {docente.cursosAsignados.map(ca => {
-                                            const curso = cursos.find(c => c.id === ca.cursoId);
-                                            return (
-                                                <div key={ca.cursoId} className="p-2 border rounded-md bg-gray-50">
-                                                    <p className="font-bold text-xs flex items-center gap-2">
-                                                        {curso?.nombre}
-                                                        {ca.esTitular && <Badge variant="default" className="h-4 text-[10px]">Titular</Badge>}
-                                                    </p>
-                                                    <div className="flex flex-wrap gap-1 mt-1">
-                                                        {ca.asignaturas.map(asigId => {
-                                                            const asig = asignaturas.find(a => a.id === asigId);
-                                                            return <Badge key={asigId} variant="secondary" style={{backgroundColor: asig?.color, color: 'white', fontSize: '10px'}}>{asig?.codigo}</Badge>
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                )}
+                            </CardTitle>
+                            <CardDescription>{docente.especialidad}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 flex-grow">
+                            <div className="space-y-2 text-sm">
+                              <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-gray-500"/>{docente.email || 'No disponible'}</p>
+                              <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-gray-500"/>{docente.telefono || 'No disponible'}</p>
                             </div>
-                        ) : (
-                            <div className="text-center text-xs text-gray-500 pt-2 border-t">Sin asignaciones.</div>
-                        )}
-                    </CardContent>
-                </Card>
-            ))}
+                            <div className="flex gap-2">
+                               <Badge variant={docente.tipo.startsWith("titular") ? "default" : "secondary"}>
+                                    {docente.tipo === 'titular' ? 'Titular' : docente.tipo === 'titular_con_adicionales' ? 'Titular c/ Adicionales' : 'Rotación'}
+                               </Badge>
+                               <Badge variant="outline">{docente.nivel}</Badge>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs">Carga Horaria</Label>
+                                <Progress value={cargaPorcentaje} />
+                                <p className="text-xs text-right">{horasAsignadas} / {docente.horasDisponibles} horas</p>
+                            </div>
+                            {docente.cursosAsignados && docente.cursosAsignados.length > 0 && (
+                                <div className="pt-2 border-t">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="font-semibold text-sm">Asignaciones ({docente.cursosAsignados.length})</h4>
+                                        <Button variant="ghost" size="sm" onClick={() => toggleExpanded(docente.id)}>
+                                            {expandedDocentes.has(docente.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                    {expandedDocentes.has(docente.id) && (
+                                        <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
+                                            {docente.cursosAsignados.map(ca => {
+                                                const curso = cursos.find(c => c.id === ca.cursoId);
+                                                return (
+                                                    <div key={ca.cursoId} className="p-2 border rounded-md bg-gray-50">
+                                                        <p className="font-bold text-xs flex items-center gap-2">
+                                                            {curso?.nombre}
+                                                            {ca.esTitular && <Badge variant="default" className="h-4 text-[10px]">Titular</Badge>}
+                                                        </p>
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            {ca.asignaturas.map(asigId => {
+                                                                const asig = asignaturas.find(a => a.id === asigId);
+                                                                return <Badge key={asigId} variant="secondary" style={{backgroundColor: asig?.color, color: 'white', fontSize: '10px'}}>{asig?.codigo}</Badge>
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )
+            })}
         </div>
     )
 }
@@ -287,6 +286,12 @@ function DocenteForm({ docente, cursos, asignaturas, configuracionHorario, onSav
     const periodosDeClase = configuracionHorario?.periodosPersonalizados?.filter(p => p.tipo === "clase") || [];
     const cursosDisponibles = ordenarCursosAutomaticamente(cursos.filter(c => formData.nivel === 'ambos' || c.nivel === formData.nivel));
 
+    const asignaturasDelCursoSeleccionado = asignaturas.filter(asig => {
+        const cursoSeleccionado = cursos.find(c => c.id === asignacionForm.cursoId);
+        if(!cursoSeleccionado) return false;
+        return asig.horasPorNivel[cursoSeleccionado.nivel]?.[cursoSeleccionado.grado] > 0;
+    });
+
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4 p-4 border rounded-lg">
@@ -318,13 +323,8 @@ function DocenteForm({ docente, cursos, asignaturas, configuracionHorario, onSav
                      <div><Label>Horas Disponibles</Label><Input type="number" value={formData.horasDisponibles} onChange={e => setFormData(f => ({...f, horasDisponibles: parseInt(e.target.value) || 0}))} /></div>
                 </div>
                 <div>
-                  <Label>Especialidad</Label>
-                  <Select value={formData.especialidad} onValueChange={v => setFormData(f => ({...f, especialidad: v}))}>
-                      <SelectTrigger><SelectValue placeholder="Selecciona una especialidad"/></SelectTrigger>
-                      <SelectContent>
-                          {especialidadesComunes.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-                      </SelectContent>
-                  </Select>
+                  <Label>Título Académico</Label>
+                  <Input value={formData.especialidad} onChange={e => setFormData(f => ({...f, especialidad: e.target.value}))} placeholder="Ej: Lic. en Educación Básica"/>
                 </div>
             </div>
 
@@ -343,7 +343,7 @@ function DocenteForm({ docente, cursos, asignaturas, configuracionHorario, onSav
                     <div>
                         <Label>Asignaturas</Label>
                         <div className="p-2 border rounded-md max-h-32 overflow-y-auto space-y-1 bg-white">
-                            {asignacionForm.cursoId ? asignaturas.map(a => (
+                            {asignacionForm.cursoId ? asignaturasDelCursoSeleccionado.map(a => (
                                 <div key={a.id} className="flex items-center gap-2">
                                     <input type="checkbox" id={`asig-${a.id}`} checked={asignacionForm.asignaturas.includes(a.id)} onChange={() => handleAsignaturaToggle(a.id)} />
                                     <label htmlFor={`asig-${a.id}`} className="text-sm">{a.nombre}</label>
@@ -440,6 +440,7 @@ function DocenteForm({ docente, cursos, asignaturas, configuracionHorario, onSav
         </form>
     );
 }
+
 
 const DynamicDocentesPage = dynamic(() => Promise.resolve(DocentesPageComponent), { ssr: false });
 export default function DocentesPage() {
