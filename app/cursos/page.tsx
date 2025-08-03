@@ -81,9 +81,6 @@ function CursosPageComponent() {
       return
     }
     
-    // CORRECCIÓN: Manejar el valor 'ninguno' para evitar guardarlo en la BD
-    const titularId = formData.docenteTitularId === 'ninguno' ? '' : formData.docenteTitularId;
-
     const cursoData = {
       ...editingCurso,
       id: editingCurso?.id || Date.now().toString(),
@@ -93,7 +90,7 @@ function CursosPageComponent() {
       seccion: formData.seccion,
       estudiantesMatriculados: parseInt(formData.estudiantesMatriculados) || 0,
       aula: formData.aula,
-      docenteTitularId: titularId,
+      docenteTitularId: formData.docenteTitularId === 'ninguno' ? '' : formData.docenteTitularId,
     }
     
     await saveCurso(cursoData)
@@ -155,7 +152,6 @@ function CursosPageComponent() {
               <Select value={formData.docenteTitularId} onValueChange={(v) => setFormData(f => ({...f, docenteTitularId: v}))}>
                 <SelectTrigger><SelectValue placeholder="Asignar un docente titular"/></SelectTrigger>
                 <SelectContent>
-                  {/* CORRECCIÓN: Se usa un valor no vacío para "Ninguno" */}
                   <SelectItem value="ninguno">Ninguno</SelectItem>
                   {docentes.filter(d => d.tipo === 'titular' || d.tipo === 'titular_con_adicionales').map(d => <SelectItem key={d.id} value={d.id}>{d.nombre} {d.apellido}</SelectItem>)}
                 </SelectContent>
