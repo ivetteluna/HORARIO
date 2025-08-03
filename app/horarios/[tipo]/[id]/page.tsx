@@ -19,45 +19,45 @@ export default function HorarioDetallePage() {
 
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true)
-      await database.init()
-      const horariosGuardados = localStorage.getItem("horariosGenerados")
+      setLoading(true);
+      await database.init();
+      const horariosGuardados = localStorage.getItem("horariosGenerados");
       if (horariosGuardados) {
-        const horarios = JSON.parse(horariosGuardados)
-        const horarioEncontrado = horarios.find((h) => h.tipo === tipo && h.entidadId === id)
-        setHorario(horarioEncontrado)
+        const horarios = JSON.parse(horariosGuardados);
+        setHorario(horarios.find((h) => h.tipo === tipo && h.entidadId === id));
       }
-      const storeName = tipo === "docente" ? "docentes" : "cursos"
-      const entidadData = await database.get<DocenteDB | CursoDB>(storeName, id)
-      setEntidad(entidadData)
+      const storeName = tipo === "docente" ? "docentes" : "cursos";
+      setEntidad(await database.get<DocenteDB | CursoDB>(storeName, id));
 
       const [escuelaConfig, horarioConfig] = await Promise.all([
         database.get<ConfiguracionDB>("configuracion", "escuela"),
         database.get<ConfiguracionDB>("configuracion", "horario"),
-      ])
-      setConfiguracion({ escuela: escuelaConfig?.data, horario: horarioConfig?.data })
-      setLoading(false)
-    }
-    if (tipo && id) loadData()
-  }, [tipo, id])
+      ]);
+      setConfiguracion({ escuela: escuelaConfig?.data, horario: horarioConfig?.data });
+      setLoading(false);
+    };
+    if (tipo && id) loadData();
+  }, [tipo, id]);
 
-  if (loading) return (
-    <div className="flex h-screen items-center justify-center">
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Cargando horario...</p>
         </div>
-    </div>
-  )
+      </div>
+    );
+  }
   
   if (!horario || !entidad) return <p className="p-6">Horario o entidad no encontrados.</p>
 
   const nombreCompleto = tipo === "docente"
     ? `${(entidad as DocenteDB).nombre} ${(entidad as DocenteDB).apellido}`
-    : (entidad as CursoDB).nombre
+    : (entidad as CursoDB).nombre;
 
   return (
-    <div className="p-6">
+    <div className="p-0 md:p-6 print-this">
       <div className="mb-6 flex items-center justify-between no-print">
         <div className="flex items-center gap-4">
           <Link href="/horarios">
@@ -86,5 +86,5 @@ export default function HorarioDetallePage() {
           />
       </div>
     </div>
-  )
+  );
 }

@@ -36,11 +36,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <div className="flex h-screen bg-gray-100">
           <Sidebar />
-          <main className="flex-1 overflow-y-auto">
-            <div className="p-6">
-              {children}
-            </div>
-            <footer className="bg-white border-t border-gray-200 py-4 px-6 mt-auto">
+          <main className="flex-1 overflow-y-auto print-this"> {/* <-- CLASE AÑADIDA */}
+            {children}
+            <footer className="bg-white border-t border-gray-200 py-4 px-6 mt-auto no-print">
               <div className="text-center text-sm text-gray-600">
                 <p className="font-medium">Aplicación creada por Luis Baudilio Luna</p>
                 <p className="text-xs mt-1">Tel. (829) 475-4755</p>
