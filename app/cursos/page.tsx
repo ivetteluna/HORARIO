@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -80,12 +81,19 @@ function CursosPageComponent() {
       return
     }
     
+    // CORRECCIÓN: Manejar el valor 'ninguno' para evitar guardarlo en la BD
+    const titularId = formData.docenteTitularId === 'ninguno' ? '' : formData.docenteTitularId;
+
     const cursoData = {
       ...editingCurso,
       id: editingCurso?.id || Date.now().toString(),
       nombre: nombreDelCurso,
-      ...formData,
+      nivel: formData.nivel,
+      grado: formData.grado,
+      seccion: formData.seccion,
       estudiantesMatriculados: parseInt(formData.estudiantesMatriculados) || 0,
+      aula: formData.aula,
+      docenteTitularId: titularId,
     }
     
     await saveCurso(cursoData)
@@ -147,7 +155,8 @@ function CursosPageComponent() {
               <Select value={formData.docenteTitularId} onValueChange={(v) => setFormData(f => ({...f, docenteTitularId: v}))}>
                 <SelectTrigger><SelectValue placeholder="Asignar un docente titular"/></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Ninguno</SelectItem>
+                  {/* CORRECCIÓN: Se usa un valor no vacío para "Ninguno" */}
+                  <SelectItem value="ninguno">Ninguno</SelectItem>
                   {docentes.filter(d => d.tipo === 'titular' || d.tipo === 'titular_con_adicionales').map(d => <SelectItem key={d.id} value={d.id}>{d.nombre} {d.apellido}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -206,7 +215,17 @@ function CursosPageComponent() {
   );
 }
 
-const DynamicCursosPage = dynamic(() => Promise.resolve(CursosPageComponent), { ssr: false });
+const DynamicCursosPage = dynamic(() => Promise.resolve(CursosPageComponent), {
+    ssr: false,
+    loading: () => (
+        <div className="flex h-screen items-center justify-center">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Cargando Módulo de Cursos...</p>
+            </div>
+        </div>
+    )
+});
 
 export default function CursosPage() {
     return (
